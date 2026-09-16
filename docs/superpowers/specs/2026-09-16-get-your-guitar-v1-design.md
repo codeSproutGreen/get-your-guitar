@@ -292,7 +292,7 @@ get-your-guitar/
 완료 기준: 체크리스트 전 항목 통과 기록. 이후 v2 백로그 착수.
 
 ## 10. 스택·환경
-- M0(2026-09-16)에서 고정: Gradle 9.7.0, AGP 9.4.0(built-in Kotlin — `kotlin-android` 플러그인 미사용), Kotlin 2.4.20, Compose BOM 2026.09.00, kotlinx.coroutines 1.11.0, DataStore Preferences 1.2.1, JUnit Jupiter 6.1.3(JUnit 5 API). **compileSdk 37 / targetSdk 37 / minSdk 33** — Compose 1.12.1·core-ktx 1.19.0이 API 37을 요구해 계획의 36에서 올렸다. 버전의 단일 진실은 `gradle/libs.versions.toml`.
+- M0(2026-09-16)에서 고정: Gradle 9.7.0, AGP 9.4.0(built-in Kotlin — `kotlin-android` 플러그인 미사용), Kotlin 2.4.20, Compose BOM 2026.09.00, kotlinx.coroutines 1.11.0, DataStore Preferences 1.2.1, JUnit Jupiter 6.1.3(JUnit 5 API). **compileSdk 37 / targetSdk 36 / minSdk 33** — Compose 1.12.1·core-ktx 1.19.0이 compileSdk 37을 요구해 계획의 36에서 올렸다. targetSdk는 실기기 검증 전에 API 37 런타임 동작 변화를 받지 않도록 36에 둔다 (targetSdk ≥ 36부터 600dp 이상 화면에서는 OS가 `screenOrientation` 고정을 무시하므로 가로 고정은 폰에서만 보장된다). 버전의 단일 진실은 `gradle/libs.versions.toml`.
 - 개발 환경 워크플로우와 아키랩 의존성은 `CLAUDE.md`, `README.md` 참고. 아키랩은 코드·JVM 테스트·컴파일까지, 실기기 검증은 검증 환경.
 
 ## 11. 가정과 열린 값
