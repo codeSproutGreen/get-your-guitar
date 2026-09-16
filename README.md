@@ -13,6 +13,20 @@
 
 워크플로우 규칙은 `CLAUDE.md` 참고.
 
+## 빌드·테스트
+
+```bash
+./gradlew :core:test                      # 순수 Kotlin 로직 단위테스트 (모든 환경)
+./gradlew :app:assembleDebug :app:lintDebug   # 컴파일·린트 검증
+./gradlew :app:installDebug               # 실기기 설치 (검증 환경, USB 디버깅)
+```
+Windows Git Bash에서는 `./gradlew.bat`. `JAVA_HOME`(JDK 17+)과 `ANDROID_HOME` 또는 `local.properties`의 `sdk.dir`이 필요하다.
+
+### 검증 환경에서 M0 확인 절차
+1. `git pull` → `./gradlew :app:installDebug` → 폰에서 "get-your-guitar" 실행
+2. 확인: 가로로 뜨고 화면 가운데 "get-your-guitar" 텍스트가 보인다
+3. 결과를 README "환경별 의존성"에 그 환경 섹션(JDK·SDK 버전·경로)과 함께 기록해 push
+
 ## 환경별 의존성
 
 ### 아키랩 (Windows Server 2019, 기기 연결 불가) — 2026-09-16 설치
@@ -24,9 +38,10 @@ C: 드라이브는 여유가 ~1 GB뿐이므로 어떤 도구·캐시도 C:에 �
 |---|---|---|
 | JDK | Eclipse Temurin 17.0.20.1+1 | `E:\yjane.kim\tools\jdk-17.0.20.1+1` |
 | Android cmdline-tools | 22.0 | `E:\yjane.kim\tools\android-sdk\cmdline-tools\latest` |
-| Android SDK Platform | `platforms;android-36` (rev 2) | `E:\yjane.kim\tools\android-sdk\platforms\android-36` |
+| Android SDK Platform (compileSdk 37) | `platforms;android-37.0` (rev 2, 첫 빌드 때 AGP가 자동 설치) | `E:\yjane.kim\tools\android-sdk\platforms\android-37.0` |
+| Android SDK Platform | `platforms;android-36` (rev 2) — 현재 미사용 | `E:\yjane.kim\tools\android-sdk\platforms\android-36` |
 | Android Build-Tools | `build-tools;36.0.0` | `E:\yjane.kim\tools\android-sdk\build-tools\36.0.0` |
-| Gradle 배포판·의존성 캐시 | wrapper가 관리 | `E:\yjane.kim\tools\gradle-user-home` |
+| Gradle | 9.7.0 — 프로젝트 wrapper가 관리 | `E:\yjane.kim\tools\gradle-user-home\wrapper\dists\gradle-9.7.0-bin` |
 
 환경변수 (User scope):
 
@@ -53,5 +68,5 @@ PATH            += E:\yjane.kim\tools\jdk-17.0.20.1+1\bin;E:\yjane.kim\tools\and
 #    https://dl.google.com/android/repository/commandlinetools-win-15859902_latest.zip
 # 3. 환경변수 설정 후 새 터미널에서:
 sdkmanager --licenses
-sdkmanager "platforms;android-36" "build-tools;36.0.0"
+sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
 ```
