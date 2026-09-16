@@ -1,15 +1,16 @@
 ---
 name: get-your-guitar-project
-description: What the get-your-guitar app is — a bass guitar fretboard simulator modeled on the Play Store app "Bass Guitar Solo"; stack/architecture not decided yet
+description: What the get-your-guitar app is (bass fretboard simulator like "Bass Guitar Solo"), the approved v1 design/spec location, key decisions, and v2 backlog with hooks
 metadata:
   type: project
 ---
 
-- The app is a **bass guitar fretboard simulator**, modeled on the existing app **"Bass Guitar Solo"**. User confirmed this on 2026-09-16.
-- Reference screenshot: `reference.webp` in the repo root — landscape phone, "Full 24-fret experience", top toolbar (menu, play, record, instrument, metronome-like icon), left/right arrows to scroll the fretboard, "SOLO" mode badge, fret markers on a wood-textured neck.
-- Tech stack, minSdk/compileSdk, architecture, and feature scope are **not decided yet**. Run superpowers:brainstorming with the user before scaffolding any project files.
-- Toolchain available in 아키랩: JDK 17, `platforms;android-36`, `build-tools;36.0.0`. sdkmanager also lists `platforms;android-37.0/37.1/37.2` (new minor-version platform naming) — not installed; revisit compileSdk choice when picking the AGP version.
+- The app is a **bass guitar fretboard simulator** for the user's own practice (not for store release), modeled on the app **"Bass Guitar Solo"**. Reference screenshot: `reference.webp` in repo root.
+- **v1 design spec (user-approved 2026-09-16):** `docs/superpowers/specs/2026-09-16-get-your-guitar-v1-design.md`. Read it before any implementation work; it has milestones M0–M3 in section 9.
+- Key decisions: Kotlin + Jetpack Compose (Canvas fretboard); `:core` pure Kotlin/JVM module (music theory, Karplus-Strong synth, metronome, engine — unit-tested in 아키랩) + `:app` Android module; audio via `AudioTrack` low-latency (approach "C": output behind `AudioOutput` interface so Oboe can replace it later); minSdk 33, compileSdk 36; 4-string EADG fixed; tap = pluck with natural decay, fretboard drag = slide/rake, strip drag = scroll with snap; 12 equal-width frets per view.
+- **v2 backlog with hooks already in the v1 design:** bending (gesture only; `Voice.setPitch(hz)` is continuous), real fret spacing with toggle (`FretLayout` interface, v1 = `EqualFretLayout`), sample-based voice, 5-string/tunings, recording.
+- Implementation plan documents go in `docs/superpowers/plans/`.
 
-**Why:** The user's goal is a clone-style app of a known reference; decisions should be checked against that reference rather than invented.
+**Why:** The user explicitly asked that v2 features (bending, real spacing) be designed for now but built later; the spec records the hooks so they aren't lost.
 
-**How to apply:** Look at `reference.webp` before designing any screen. Keep the first milestone small (fretboard render + touch → sound) and get it to the verification environment early. Related: [[archilab-dev-workflow]]
+**How to apply:** Follow the spec's milestone order (M0 scaffold → M1 first sound → M2 settings → M3 metronome). Every milestone ends with push + verification in the device environment; 아키랩 only verifies `:core:test` and `:app:assembleDebug`. Related: [[archilab-dev-workflow]]
