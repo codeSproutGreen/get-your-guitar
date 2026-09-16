@@ -1,0 +1,35 @@
+# Gradle
+.gradle/
+build/
+
+# Local machine config (SDK path etc.) — never commit
+local.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Kotlin
+.kotlin/
+
+# Android build outputs
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+
+# Signing
+*.jks
+*.keystore
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code local-only settings (memory in .claude/memory IS tracked)
+.claude/settings.local.json
