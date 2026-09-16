@@ -33,3 +33,6 @@ Thumbs.db
 
 # Claude Code local-only settings (memory in .claude/memory IS tracked)
 .claude/settings.local.json
+
+# Superpowers SDD scratch (ledger, briefs, review packages)
+.superpowers/

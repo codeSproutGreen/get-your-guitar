@@ -15,7 +15,7 @@ This machine (E:\yjane.kim\project\get-your-guitar, Windows Server 2019) is call
 
 **아키랩 machine facts (2026-09-16):**
 - **C: drive has ~1 GB free** — never install tools or let caches grow on C:. Everything goes under `E:\yjane.kim\tools` (E: has ~460 GB free), user-scope env vars only.
-- Installed 2026-09-16 (see README for the table): Temurin JDK 17.0.20.1+1, Android cmdline-tools 22.0, `platforms;android-36`, `build-tools;36.0.0`. No platform-tools/adb, no emulator, no Android Studio. Gradle arrives via the project wrapper into `GRADLE_USER_HOME = E:\yjane.kim\tools\gradle-user-home`.
+- Installed 2026-09-16 (see README for the table): Temurin JDK 17.0.20.1+1, Android cmdline-tools 22.0, `platforms;android-37.0` (compileSdk 37; AGP auto-installed it during M0), `platforms;android-36` (unused), `build-tools;36.0.0`. No platform-tools/adb, no emulator, no Android Studio. Gradle arrives via the project wrapper into `GRADLE_USER_HOME = E:\yjane.kim\tools\gradle-user-home`.
 - System PATH still puts Oracle JRE 1.8 first, so bare `java` reports 1.8; gradlew/sdkmanager use JAVA_HOME (17) so builds are fine.
 - In a Claude Code session started before the env vars were set (or if `JAVA_HOME` shows empty in Bash), export `JAVA_HOME`, `ANDROID_HOME`, `GRADLE_USER_HOME` inline for Gradle/sdkmanager commands.
 - `gh` CLI is installed and logged in as `codeSproutGreen`.
