@@ -23,3 +23,4 @@ dependencyResolutionManagement {
 rootProject.name = "get-your-guitar"
 
 include(":core")
+include(":app")
