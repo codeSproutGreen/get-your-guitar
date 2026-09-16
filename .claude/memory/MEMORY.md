@@ -1,1 +1,2 @@
-- [Archilab dev workflow](archilab-dev-workflow.md) — this env is "아키랩", GitHub remote is SSOT, no Android device here; other envs verify & push back
+- [Archilab dev workflow](archilab-dev-workflow.md) — this env is "아키랩", GitHub remote is SSOT, no Android device here; other envs verify & push back; C: nearly full, tools on E:
+- [get-your-guitar project](get-your-guitar-project.md) — bass fretboard simulator modeled on "Bass Guitar Solo" (reference.webp); stack not decided yet, brainstorm first
