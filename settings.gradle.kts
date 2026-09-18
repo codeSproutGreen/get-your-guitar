@@ -21,3 +21,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "get-your-guitar"
+
+include(":core")
