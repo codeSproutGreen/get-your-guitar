@@ -13,6 +13,21 @@
 
 워크플로우 규칙은 `CLAUDE.md` 참고.
 
+## 빌드·테스트
+
+```bash
+./gradlew :core:test                          # 순수 Kotlin 로직 단위테스트 (모든 환경)
+./gradlew :app:assembleDebug :app:lintDebug   # 컴파일·린트 검증
+./gradlew :app:installDebug                   # 실기기 설치 (검증 환경, USB 디버깅)
+```
+Windows Git Bash에서는 `./gradlew.bat`. `JAVA_HOME`(JDK 17+)과 `ANDROID_HOME` 또는 `local.properties`의 `sdk.dir`이 필요하다.
+compileSdk 37 / targetSdk 36 / minSdk 33. 필요한 SDK 플랫폼(`platforms;android-37`)은 라이선스가 수락돼 있으면 AGP가 자동 다운로드한다.
+
+### 검증 환경에서 M0 확인 절차
+1. `git pull` → `./gradlew :app:installDebug` → 폰에서 "get-your-guitar" 실행
+2. 확인: 가로로 뜨고 화면 가운데 "get-your-guitar" 텍스트가 보인다
+3. 결과를 `docs/STATUS.md`와 README "환경별 의존성"의 그 환경 섹션에 기록해 push
+
 ## 환경별 의존성
 
 ### 아키랩 (Windows Server 2019, 기기 연결 불가) — 2026-09-16 설치
@@ -72,7 +87,7 @@ Android Studio가 설치돼 있어 별도 설치 없이 그 번들을 그대로 
 
 주의:
 - `ANDROID_HOME` 환경변수는 없다. Android Studio가 만든 `local.properties`(`sdk.dir=...`)가 있으면 Gradle이 그걸 쓰고, 없으면 `sdk.dir`을 직접 적는다 (gitignore 됨).
-- `cmdline-tools`는 없다 (SDK 관리는 Android Studio SDK Manager로). `platforms;android-36`(36.0)은 없고 `android-36.1`만 있다. M0 계획은 compileSdk 36을 쓰므로, AGP가 자동 다운로드하거나 SDK Manager에서 "Android 16 (API 36)"을 추가해야 할 수 있다 — **M0 첫 빌드 때 확인 필요.**
-- JDK가 17이 아닌 21이다. Gradle 9.x·AGP 9.x는 JDK 21에서 동작하지만, 아키랩(17)과 결과가 다르면 `java.toolchain`을 17로 고정하는 것을 검토한다.
+- `cmdline-tools`는 없다 (SDK 관리는 Android Studio SDK Manager로). M0 첫 빌드(2026-09-18) 때 AGP가 `platforms;android-36`·`android-37.0`을 자동 다운로드했다 — 별도 설치 불필요.
+- JDK가 17이 아닌 21이다. M0(`:core:test`, `:app:assembleDebug`, `lintDebug`)는 JDK 21로 통과. 아키랩(17)과 결과가 다르면 `java.toolchain`을 17로 고정하는 것을 검토한다.
 - `java`는 PATH에 없다. `gradlew.bat`은 `JAVA_HOME`을 쓰므로 빌드에는 문제 없음.
 - `gh` CLI 설치·로그인(`codeSproutGreen`) 됨. Claude 메모리 junction은 2026-09-18에 링크 완료.

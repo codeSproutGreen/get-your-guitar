@@ -1,6 +1,6 @@
 # get-your-guitar
 
-Android 앱 프로젝트. 기술 스택은 확정 후 이 파일에 갱신한다.
+Android 앱 프로젝트 (베이스 지판 시뮬레이터). Kotlin 2.4 + Jetpack Compose, Gradle 9.7 멀티모듈: `:core`(순수 JVM, JUnit 5) + `:app`(AGP 9.4, compileSdk 37 / targetSdk 36 / minSdk 33). 설계 스펙은 `docs/superpowers/specs/`, 구현 계획은 `docs/superpowers/plans/`.
 
 ## 개발 환경 워크플로우
 
@@ -21,3 +21,14 @@ Android 앱 프로젝트. 기술 스택은 확정 후 이 파일에 갱신한다
   `~/.claude/projects/<encoded-project-path>/memory` 가 이 디렉토리로 링크(junction/symlink)된다.
 - 메모리 파일을 추가·수정했으면 코드와 함께 커밋한다. 다른 환경의 Claude가 그 메모리를 읽는다.
 - `.claude/memory/MEMORY.md` 는 인덱스. 각 메모리는 개별 파일.
+
+## 빌드·테스트 명령
+
+- `./gradlew :core:test` — 순수 Kotlin 로직 테스트. push 전 필수.
+- `./gradlew :app:assembleDebug :app:lintDebug` — 컴파일·린트. push 전 필수. 린트 에러 0 유지(경고는 허용).
+- 아키랩(Windows, Claude Code Bash)에서는 환경변수가 세션에 없을 수 있으니 앞에
+  `export JAVA_HOME='E:\yjane.kim\tools\jdk-17.0.20.1+1' GRADLE_USER_HOME='E:\yjane.kim\tools\gradle-user-home'` 를 붙이고 `./gradlew.bat`을 쓴다.
+- SDS PC(검증 환경)는 `JAVA_HOME`이 Android Studio JBR(21)로 잡혀 있어 프리앰블 없이 `./gradlew.bat`을 바로 쓴다. `local.properties`에 `sdk.dir` 필요.
+- 버전은 `gradle/libs.versions.toml`이 단일 진실. 올릴 때는 그 파일만 고친다.
+- `:app`은 AGP built-in Kotlin을 쓴다 — `org.jetbrains.kotlin.android` 플러그인을 적용하지 않는다.
+- Claude Code Bash 도구의 heredoc은 `\`를 `\`로 깎는다. 백슬래시가 든 Kotlin/정규식 문자열은 Edit 도구로 쓴다.

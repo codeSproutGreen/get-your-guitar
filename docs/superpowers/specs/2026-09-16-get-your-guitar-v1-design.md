@@ -259,7 +259,7 @@ get-your-guitar/
 1. 최신 안정 버전 확인·고정: AGP, Gradle, Kotlin, Compose BOM, DataStore, JUnit 5 → `gradle/libs.versions.toml`
 2. Gradle wrapper 생성(배포판은 `GRADLE_USER_HOME`으로), `.gitattributes`(`gradlew`·`*.sh`는 LF)
 3. `:core` (`kotlin("jvm")`, JUnit 5) — 자리표시 테스트 1개로 파이프라인 확인
-4. `:app` (compileSdk 36, minSdk 33, Compose, 가로 고정) — "get-your-guitar" 텍스트만 있는 화면
+4. `:app` (compileSdk 36→37(M0에서 변경, 10장 참고), minSdk 33, Compose, 가로 고정) — "get-your-guitar" 텍스트만 있는 화면
 5. `local.properties`는 gitignore, README에 빌드 명령 기록
 완료 기준: 아키랩 `:core:test`·`:app:assembleDebug` 통과. 검증 환경: 설치·실행 확인.
 
@@ -292,7 +292,7 @@ get-your-guitar/
 완료 기준: 체크리스트 전 항목 통과 기록. 이후 v2 백로그 착수.
 
 ## 10. 스택·환경
-- Kotlin 2.x, AGP 최신 안정판(compileSdk 36 / targetSdk 36 / minSdk 33), Compose BOM 최신, kotlinx.coroutines, DataStore Preferences, JUnit 5. 정확한 버전은 M0에서 확인해 `libs.versions.toml`에 고정.
+- Kotlin 2.x, AGP 최신 안정판(compileSdk 36 / targetSdk 36 / minSdk 33), Compose BOM 최신, kotlinx.coroutines, DataStore Preferences, JUnit 5. 정확한 버전은 M0에서 확인해 `libs.versions.toml`에 고정. **[M0 실행 기록 2026-09-18]** androidx.core 1.19.0·Compose 1.12.1이 API 37 이상 컴파일을 요구해 **compileSdk는 37**로 고정했다(targetSdk 36·minSdk 33은 유지). AGP가 `platforms;android-37`을 자동 다운로드한다.
 - 개발 환경 워크플로우와 아키랩 의존성은 `CLAUDE.md`, `README.md` 참고. 아키랩은 코드·JVM 테스트·컴파일까지, 실기기 검증은 검증 환경.
 
 ## 11. 가정과 열린 값
