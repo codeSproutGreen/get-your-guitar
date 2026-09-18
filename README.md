@@ -55,3 +55,24 @@ PATH            += E:\yjane.kim\tools\jdk-17.0.20.1+1\bin;E:\yjane.kim\tools\and
 sdkmanager --licenses
 sdkmanager "platforms;android-36" "build-tools;36.0.0"
 ```
+
+### SDS PC (Windows 11 Pro, Android Studio 설치, adb 있음) — 2026-09-18 확인
+
+실기기를 연결할 수 있는 환경이므로 **검증 환경** 역할. 저장소 위치 `C:\Users\SDS\project\get-your-guitar`. C: 여유 ~270 GB.
+Android Studio가 설치돼 있어 별도 설치 없이 그 번들을 그대로 쓴다.
+
+| 구성요소 | 버전 | 경로 |
+|---|---|---|
+| JDK | Android Studio 번들 JBR (OpenJDK 21.0.9) | `C:\Program Files\Android\Android Studio\jbr` (`JAVA_HOME`으로 설정됨) |
+| Android Studio | 2025.3.1 (AI-253.29346.138) | `C:\Program Files\Android\Android Studio` |
+| Android SDK | platforms `android-34`, `android-35`, `android-36.1` | `C:\Users\SDS\AppData\Local\Android\Sdk` |
+| Build-Tools | 34.0.0, 35.0.0, 36.1.0 | 위 SDK 아래 |
+| platform-tools (adb) | 설치됨, PATH에 있음 | 위 SDK 아래 |
+| Gradle 캐시 | wrapper가 관리 (`GRADLE_USER_HOME` 미설정 → 기본 `~/.gradle`) | `C:\Users\SDS\.gradle` |
+
+주의:
+- `ANDROID_HOME` 환경변수는 없다. Android Studio가 만든 `local.properties`(`sdk.dir=...`)가 있으면 Gradle이 그걸 쓰고, 없으면 `sdk.dir`을 직접 적는다 (gitignore 됨).
+- `cmdline-tools`는 없다 (SDK 관리는 Android Studio SDK Manager로). `platforms;android-36`(36.0)은 없고 `android-36.1`만 있다. M0 계획은 compileSdk 36을 쓰므로, AGP가 자동 다운로드하거나 SDK Manager에서 "Android 16 (API 36)"을 추가해야 할 수 있다 — **M0 첫 빌드 때 확인 필요.**
+- JDK가 17이 아닌 21이다. Gradle 9.x·AGP 9.x는 JDK 21에서 동작하지만, 아키랩(17)과 결과가 다르면 `java.toolchain`을 17로 고정하는 것을 검토한다.
+- `java`는 PATH에 없다. `gradlew.bat`은 `JAVA_HOME`을 쓰므로 빌드에는 문제 없음.
+- `gh` CLI 설치·로그인(`codeSproutGreen`) 됨. Claude 메모리 junction은 2026-09-18에 링크 완료.

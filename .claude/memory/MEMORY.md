@@ -1,2 +1,4 @@
 - [Archilab dev workflow](archilab-dev-workflow.md) — this env is "아키랩", GitHub remote is SSOT, no Android device here; other envs verify & push back; C: nearly full, tools on E:
 - [get-your-guitar project](get-your-guitar-project.md) — bass fretboard simulator like "Bass Guitar Solo"; v1 spec approved 2026-09-16 at docs/superpowers/specs/, milestones M0–M3, v2 hooks (bending, real spacing)
+- [SDS verification env](sds-verification-env.md) — SDS PC (Win11, Android Studio, adb) is the device-verification env; JDK 21 JBR + SDK android-36.1 only, differs from 아키랩; memory junction linked 2026-09-18
+- [Project status log](../../docs/STATUS.md) — cross-environment progress log lives in the repo at docs/STATUS.md; read it first, update it before every push
