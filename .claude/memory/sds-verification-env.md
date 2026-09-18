@@ -1,6 +1,6 @@
 ---
 name: sds-verification-env
-description: The "SDS PC" environment (C:\Users\SDS\project\get-your-guitar, Windows 11, Android Studio + adb) is the device-verification environment; its toolchain differs from 아키랩 (JDK 21 JBR, SDK android-36.1 only, no cmdline-tools)
+description: The "SDS PC" environment (C:SERSSDSPROJECTGET-YOUR-GUITAR, WINDOWS 11, ANDROID STUDIO + ADB) IS THE DEVICE-VERIFICATION ENVIRONMENT; JDK 21 JBR BUILDS M0 FINE, AGP AUTO-DOWNLOADS SDK PLATFORMS HERE
 metadata:
   type: project
 ---
@@ -16,4 +16,4 @@ Facts (2026-09-18, full table in README "SDS PC" section):
 
 **Why:** Toolchain differs from 아키랩 in JDK major version and SDK platform revision; the first M0 build here is where those differences will surface.
 
-**How to apply:** When building here for the first time, check whether AGP resolves compileSdk 36 against `android-36.1` or needs `platforms;android-36` from SDK Manager, and consider pinning a JDK 17 toolchain if 아키랩/SDS builds diverge. Record the outcome in README and this memory. The user wants project state kept in GitHub, not in local-only memory — always commit memory changes with code and push before ending a session.
+**How to apply:** M0 built here 2026-09-18 with JDK 21: AGP auto-downloaded `platforms;android-36` and `android-37.0` (licenses dir present), `:core:test`/`assembleDebug`/`lintDebug` all pass — no toolchain pinning needed so far. `local.properties` has `sdk.dir=C:/Users/SDS/AppData/Local/Android/Sdk`. Still to do here: attach a phone and run `installDebug`. The user wants project state kept in GitHub, not in local-only memory — always update `docs/STATUS.md` and commit memory changes with code, push before ending a session.

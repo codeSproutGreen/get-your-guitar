@@ -8,9 +8,11 @@
 | 마일스톤 | 상태 | 비고 |
 |---|---|---|
 | 설계 스펙 v1 | ✅ 승인 (2026-09-16) | `docs/superpowers/specs/2026-09-16-get-your-guitar-v1-design.md` |
-| M0 스캐폴드 — 계획 | ✅ 작성 (2026-09-16) | `docs/superpowers/plans/2026-09-16-m0-scaffold.md`, Task 1~5 |
-| M0 스캐폴드 — 구현 | ⬜ 미착수 | 저장소에 Gradle/Kotlin 코드 없음. Task 1(wrapper·버전 카탈로그)부터 |
-| M1 첫 소리 | ⬜ | |
+| M0 스캐폴드 — 계획 | ✅ 작성 (2026-09-16) | `docs/superpowers/plans/2026-09-16-m0-scaffold.md` |
+| M0 스캐폴드 — 구현 | ✅ 빌드 통과 (2026-09-18, SDS PC) | `:core:test` 1개 PASSED, `assembleDebug`·`lintDebug` 통과(린트 에러 0·경고 4), APK 29.5 MB. **compileSdk 37**(스펙 36에서 변경, 계획서 "실행 기록" 참고) |
+| M0 — 실기기 확인 | ⬜ **검증 환경에서 확인 필요** | 폰 미연결 상태였음. README "검증 환경에서 M0 확인 절차" 참고 |
+| M0 — 아키랩 빌드 확인 | ⬜ 아키랩에서 확인 필요 | JDK 17 + `platforms;android-37` 자동 다운로드 여부 |
+| M1 첫 소리 | ⬜ 미착수 | 계획 문서 없음. 스펙 9장 M1 참고 |
 | M2 연주감·설정 | ⬜ | |
 | M3 메트로놈·마무리 | ⬜ | |
 
@@ -18,16 +20,17 @@
 
 | 환경 | 역할 | 세팅 상태 |
 |---|---|---|
-| 아키랩 (Win Server 2019, `E:\yjane.kim\...`) | 초기 개발·빌드·단위테스트. 기기 없음 | ✅ JDK 17, SDK android-36, 메모리 링크 완료 (README 참고) |
-| SDS PC (Win11, `C:\Users\SDS\...`) | 검증 환경 (Android Studio, adb) | ✅ 메모리 링크 완료 2026-09-18. 첫 빌드 미실행 (README 참고) |
+| 아키랩 (Win Server 2019, `E:\yjane.kim\...`) | 초기 개발·빌드·단위테스트. 기기 없음 | ✅ JDK 17, SDK android-36, 메모리 링크 완료. M0 코드는 아직 여기서 빌드 안 해봄 |
+| SDS PC (Win11, `C:\Users\SDS\...`) | 검증 환경 (Android Studio, adb) | ✅ 메모리 링크·M0 빌드 완료 2026-09-18. `local.properties` 작성됨(gitignore) |
 
 ## 다음 할 일
 
-1. M0 계획 Task 1부터 실행. 어느 환경에서 하든 무방하나, 아키랩 전용 프리앰블(`E:\...` 경로)은 SDS PC에서는 쓰지 않는다.
-2. SDS PC에서 M0 첫 빌드 시 확인할 것: compileSdk 36이 `android-36.1`로 풀리는지 / `platforms;android-36` 추가 필요한지, JDK 21에서 빌드되는지. 결과를 README·이 파일에 기록.
-3. M0 완료 기준: `:core:test`·`:app:assembleDebug` 통과 + 실기기 설치·실행 확인.
+1. **SDS PC, 폰 연결 후:** `./gradlew.bat :app:installDebug` → 가로로 뜨고 가운데 "get-your-guitar" 텍스트 확인 → 이 파일 M0 행을 ✅로.
+2. **아키랩 pull 후:** 프리앰블 붙여 `./gradlew.bat :core:test :app:assembleDebug :app:lintDebug`. `platforms;android-37` 자동 다운로드 실패 시 `sdkmanager "platforms;android-37"` 후 README 아키랩 표 갱신.
+3. **M1 계획 작성** (`docs/superpowers/plans/`): 스펙 9장 M1 1~6을 TDD 단위로 분해. `:core` 작업(music/synth/engine)은 기기 없이 가능하므로 M0 실기기 확인을 기다리지 않고 시작해도 된다.
 
 ## 이력
 
 - 2026-09-16 (아키랩): 저장소 생성, 워크플로우 문서, 툴체인 설치 기록, v1 스펙 승인, M0 계획 작성.
-- 2026-09-18 (SDS PC): 환경 최초 세팅(메모리 링크), 툴체인 기록, 이 파일 생성. 코드 변경 없음.
+- 2026-09-18 (SDS PC): 환경 최초 세팅(메모리 링크), 툴체인 기록, 이 파일 생성.
+- 2026-09-18 (SDS PC): **M0 구현** — Gradle 9.7.0 wrapper, 버전 카탈로그, `:core`(JUnit 6), `:app`(빈 Compose 화면). compileSdk 36→37. 커밋 4개(d962f12, 3c3251b, f38fa14, 9c6cac3). 실기기 미확인.
