@@ -28,9 +28,11 @@
 
 ## 다음 할 일
 
-1. **사람 (SDS PC + 폰):** 수정 빌드(1e7e82a 이후)로 G줄 12프렛 이상을 다시 들어 보고 `docs/verification-checklist.md` M1 #15를 채운다. 겸해서 #13~19.
-2. **M2 구현:** 계획서 Task 1(`:core` 음색 커맨드·에너지 딥)부터. Task 1~2는 기기가 필요 없어 아키랩에서도 할 수 있다.
-3. **아키랩 pull 후:** 프리앰블 붙여 `./gradlew.bat :core:test :app:testDebugUnitTest :app:assembleDebug :app:lintDebug`. JDK 17 빌드와 `platforms;android-37` 자동 다운로드는 아직 아키랩에서 확인된 적 없다. 실패 시 `sdkmanager "platforms;android-37"`.
+v1.0.0 이후의 범위는 `docs/superpowers/specs/2026-09-21-v2-features.md`(초안, 사용자 확인 대기)에 있다. 확정 전에는 구현하지 않는다.
+
+1. **사용자 확인 필요 (v2 문서 5장):** 소리를 폰 스피커로 들었는지 이어폰으로 들었는지 / 음색은 합성 개선(A) 먼저인지 샘플(B)인지 / 개방현도 떼면 멈출지 / `RING` 모드를 남길지 / v2 범위·순서.
+2. 확정되면 제안 순서: 음색 개선 A안 + WAV 비교 → 홀드 서스테인 → 설정 화면(M2 계획서를 홀드 서스테인에 맞게 갱신) → 메트로놈 → 실제 프렛 간격.
+3. **아키랩 pull 후:** 프리앰블 붙여 `./gradlew.bat :core:test :app:testDebugUnitTest :app:assembleDebug :app:lintDebug`. JDK 17 빌드와 `platforms;android-37` 자동 다운로드는 아직 아키랩에서 확인된 적 없다.
 
 ## 이력
 
@@ -44,3 +46,4 @@
 - 2026-09-21 (SDS PC): 벤딩 구현(3e17a54, 05b50af). 규칙은 스펙 3장 백로그 표의 벤딩 행과 `FretboardTouchTracker` KDoc 참고.
 - 2026-09-21 (SDS PC): 벤딩 수정 — 더 밀면 풀리던 문제. 벤딩이 시작된 포인터는 손을 뗄 때까지 그 줄에 고정. `:app` 테스트 44개.
 - 2026-09-21 (SDS PC): **v1.0.0 릴리스** — 릴리스 빌드 설정(R8, 디버그 키 서명), 태그 `v1.0.0`, GitHub Release에 APK 게시.
+- 2026-09-21 (SDS PC): 추가 요청 2건 접수 — "누르고 있는 동안만 소리"(홀드 서스테인), "소리가 구리다"(음색). v2 기능 정의 초안 작성. 구현 없음.
