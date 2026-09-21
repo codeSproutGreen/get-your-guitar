@@ -13,6 +13,7 @@ M1 계획과 같은 형식: 작업 단위·인터페이스·테스트 목록·�
 |---|---|---|
 | 소리 잘 남, 지연 거의 없음, 화음 남 | ✅ | 없음. 버퍼 배수 기본값 2 유지, Oboe 불필요 |
 | 고음역이 조금 짧다 | 컷오프 음높이 연동으로 1차 수정(커밋 1e7e82a), 재청취 대기 | 여전히 짧으면 감쇠 기본값을 0.7 → 0.8~0.85로. 슬라이더가 생기면 사용자가 직접 찾을 수 있으므로 M2 검증 때 "마음에 드는 값"을 물어 기본값으로 삼는다 |
+| 벤딩 요청 → M2 전에 구현(커밋 3e17a54, 05b50af) | 사람 확인 대기(체크리스트 M1 #20~23) | 벤딩 폭 설정(1음/2음) 추가. 데드존·80 ms 문턱이 손에 안 맞으면 여기서 조정 |
 | 미확인: 슬라이드 매끄러움(#13), 연타 클릭(#14), 음색(#16), 판정 범위(#18), 시스템 바(#19) | ⬜ | M2 검증 때 함께 확인. 문제가 나오면 이 표에 추가 |
 
 ## Global Constraints
@@ -25,9 +26,9 @@ M1 계획과 같은 형식: 작업 단위·인터페이스·테스트 목록·�
 
 | 변경 | 내용 |
 |---|---|
-| `Command` | `SetBrightness(value)`, `SetDecay(value)` 추가. `CommandCodec` 타입 5, 6 |
+| `Command` | `SetBrightness(value)`, `SetDecay(value)` 추가. `CommandCodec` 타입 **6, 7** (5는 벤딩이 이미 씀. 타입 번호는 바꾸지 않는다) |
 | `SynthEngine` | 현재 `brightness`·`decay`를 들고 있다가 둘 중 하나가 오면 `ToneParams`를 새로 만들어 `voices.setTone`. **`ToneParams` 생성은 할당이다** → 오디오 스레드 규칙 위반. `StringVoices.setTone(brightness, decay)`처럼 Float 두 개를 받는 경로를 추가하고 `ToneParams`의 매핑 함수는 `companion`의 순수 함수(`cutoffHz(brightness, noteHz)`, `feedback(decay)`)로 옮긴다. `ToneParams` 클래스는 UI·테스트용 값 객체로 남긴다 |
-| `KarplusStrongVoice` | `setTone(brightness, decay)`. 울리는 중이면 필터 계수 즉시 반영(M1에 이미 있음). 에너지 딥: `setPitch` 글라이드 8 ms 동안 출력 게인을 1 → 0.85 → 1로(전반 4 ms 내려가고 후반 4 ms 복귀). 루프 내부가 아니라 출력에만 곱한다 |
+| `KarplusStrongVoice` | `setTone(brightness, decay)`. 울리는 중이면 필터 계수 즉시 반영(M1에 이미 있음). 에너지 딥: **슬라이드의** 글라이드 8 ms 동안 출력 게인을 1 → 0.85 → 1로(전반 4 ms 내려가고 후반 4 ms 복귀). 루프 내부가 아니라 출력에만 곱한다. **벤딩에는 딥을 걸지 않는다** — 벤딩은 `setPitch`가 초당 100번 넘게 오므로 딥을 걸면 벤딩 내내 음량이 0.85로 눌린다. `Voice.setPitch(hz)`와 별도로 `slideTo(hz)`를 두거나 `setPitch(hz, dip: Boolean)`로 구분한다 |
 
 테스트: 새 커맨드 코덱 왕복; `SetBrightness` 0 vs 1에서 같은 음의 고역 에너지(인접 샘플 차이 RMS)가 뚜렷이 다름; `SetDecay` 0 vs 1에서 1초 뒤 RMS 비가 뚜렷이 다름; 울리는 중 `SetBrightness`에 클릭 없음; 범위 밖 값 클램프; 글라이드 중 출력 포락선이 0.85 부근까지 내려갔다 복귀하고 클릭 없음; 글라이드가 끝나면 게인이 정확히 1; 기존 60개 테스트 유지. 소프트 클립 검증은 M1의 `Mixer` 테스트로 충족.
 
@@ -35,7 +36,7 @@ M1 계획과 같은 형식: 작업 단위·인터페이스·테스트 목록·�
 
 | 타입 | 내용 |
 |---|---|
-| `Settings` (data class) | `masterVolume 0.8`, `brightness 0.6`, `decay 0.7`, `metronomeVolume 0.7`, `bpm 100`, `showNoteNames false`, `audioBufferChunks 2`, `fretLayout EQUAL`. `fun sanitized()`: 범위 밖 값 클램프(`bpm` 40~240, `audioBufferChunks` ∈ {2,3,4} 아니면 2) |
+| `Settings` (data class) | `bendRangeCents 200`(200 또는 400 — 벤딩 폭 1음/2음, 2026-09-21 추가), `masterVolume 0.8`, `brightness 0.6`, `decay 0.7`, `metronomeVolume 0.7`, `bpm 100`, `showNoteNames false`, `audioBufferChunks 2`, `fretLayout EQUAL`. `fun sanitized()`: 범위 밖 값 클램프(`bpm` 40~240, `audioBufferChunks` ∈ {2,3,4} 아니면 2) |
 | `FretLayoutKind` (enum) | `EQUAL` (v2: `REAL`). 알 수 없는 저장값 → `EQUAL` |
 | `SettingsRepository` (interface) | `val settings: Flow<Settings>`, `suspend fun update(transform: (Settings) -> Settings)` |
 | `DataStoreSettingsRepository(dataStore)` | Preferences DataStore. 읽기 `IOException` → 기본값 emit. 쓰기 전에 `sanitized()` |
