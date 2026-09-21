@@ -3,6 +3,14 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+// 산출물 파일 이름: got-you-bass-debug.apk / got-you-bass-release.apk.
+// 앱 이름(런처에 보이는 이름)은 res/values/strings.xml의 app_name이다.
+// 패키지(applicationId)는 com.sproutgreen.getyourguitar 그대로 둔다 — 바꾸면 폰에서 다른 앱으로 취급돼
+// 기존 설치본을 덮어쓰지 못하고 저장된 설정도 이어지지 않는다.
+base {
+    archivesName = "got-you-bass"
+}
+
 android {
     namespace = "com.sproutgreen.getyourguitar"
     compileSdk = 37

@@ -1,5 +1,7 @@
 # get-your-guitar
 
+앱 이름은 **got-you-bass** (런처에 보이는 이름·APK 파일 이름). 저장소 이름과 패키지(`com.sproutgreen.getyourguitar`)는 처음 이름 그대로다 — 패키지를 바꾸면 폰에서 다른 앱으로 취급돼 기존 설치본을 덮어쓰지 못한다.
+
 베이스 기타 지판(fretboard) 시뮬레이터 Android 앱. 참고 앱: "Bass Guitar Solo" (`reference.webp`).
 기술 스택·아키텍처는 확정 후 갱신.
 
@@ -24,6 +26,13 @@
 Windows Git Bash에서는 `./gradlew.bat`. `JAVA_HOME`(JDK 17+)과 `ANDROID_HOME` 또는 `local.properties`의 `sdk.dir`이 필요하다.
 compileSdk 37 / targetSdk 36 / minSdk 31 (테스트 폰 Galaxy S10e가 Android 12라서 31). 필요한 SDK 플랫폼(`platforms;android-37`)은 라이선스가 수락돼 있으면 AGP가 자동 다운로드한다.
 
+### 앱 아이콘
+
+원본은 저장소 루트의 `icon.png`. 바꾸면 `python scripts/make-launcher-icon.py`(Pillow 필요)로 다시 만든다.
+적응형 아이콘이다: 원본의 흰 바깥 모서리를 투명하게 걷어 낸 그림(전경, 108dp 중 70dp)과 그림 가장자리에서 뽑은 노란 배경색.
+런처는 가운데 72dp만 보여 주므로 그림을 꽉 채우면 가장자리의 글자가 잘린다. 삼성의 둥근 사각형 마스크에 맞췄고, 원형 마스크 런처에서는 모서리가 조금 잘린다.
+APK 파일 이름의 `-debug`/`-release`는 Gradle이 빌드 종류를 붙이는 것이다. 배포할 때는 `got-you-bass-vX.Y.Z.apk`로 이름을 바꿔 올린다.
+
 ### 음색을 PC에서 들어 보기
 
 ```bash
@@ -37,8 +46,8 @@ compileSdk 37 / targetSdk 36 / minSdk 31 (테스트 폰 Galaxy S10e가 Android 1
 
 ```bash
 ./gradlew :core:test :app:testDebugUnitTest :app:lintDebug :app:assembleRelease
-# → app/build/outputs/apk/release/app-release.apk  (R8 축소, 약 1.4 MB. 디버그 빌드는 약 29 MB)
-adb install -r app/build/outputs/apk/release/app-release.apk
+# → app/build/outputs/apk/release/got-you-bass-release.apk  (R8 축소, 약 1.4 MB + 아이콘. 디버그 빌드는 약 29 MB)
+adb install -r app/build/outputs/apk/release/got-you-bass-release.apk
 ```
 - 배포는 **GitHub Releases** (`gh release create vX.Y.Z <apk>`). APK는 저장소에 커밋하지 않는다(`.gitignore`의 `*.apk`).
 - 서명은 **빌드한 PC의 Android 디버그 키**(`~/.android/debug.keystore`)다. 개인용 앱이라 정식 키스토어를 두지 않는다 — 두면 저장소에 넣을 수 없는 비밀이 생겨 환경 간 공유가 깨진다.
