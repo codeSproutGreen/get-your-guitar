@@ -38,6 +38,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sproutgreen.getyourguitar.audio.AudioController
@@ -88,10 +89,10 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Section("소리") {
-                    LabeledSlider("볼륨", settings.masterVolume, onPreview, onCommit) { s, v -> s.copy(masterVolume = v) }
-                    LabeledSlider("밝기", settings.brightness, onPreview, onCommit) { s, v -> s.copy(brightness = v) }
-                    LabeledSlider("감쇠", settings.decay, onPreview, onCommit) { s, v -> s.copy(decay = v) }
-                    Text("감쇠가 클수록 오래 울립니다. 일찍 끊으려면 지판 아래의 뮤트 바를 누르세요", color = TextDim, fontSize = 11.sp)
+                    UnitSlider("볼륨", settings.masterVolume, onPreview, onCommit) { s, v -> s.copy(masterVolume = v) }
+                    UnitSlider("밝기", settings.brightness, onPreview, onCommit) { s, v -> s.copy(brightness = v) }
+                    UnitSlider("감쇠", settings.decay, onPreview, onCommit) { s, v -> s.copy(decay = v) }
+                    Text("클수록 오래 울립니다. 일찍 끊으려면 지판 아래의 뮤트 바", color = TextDim, fontSize = 11.sp)
                 }
                 Section("시험음 (개방현)") {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -109,6 +110,23 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Section("연주 · 표시") {
+                    LabeledSlider(
+                        label = "레이크",
+                        value = settings.rakeSettleMs.toFloat(),
+                        range = Settings.MIN_RAKE_SETTLE_MS.toFloat()..Settings.MAX_RAKE_SETTLE_MS.toFloat(),
+                        valueText = "${settings.rakeSettleMs} ms",
+                        labelWidth = 44.dp,
+                        valueWidth = 52.dp,
+                        onPreview = onPreview,
+                        onCommit = onCommit,
+                    ) { s, v -> s.copy(rakeSettleMs = (v / 10f).roundToInt() * 10) }
+                    Text(
+                        "줄을 짚고 이 시간 안에 위아래로 움직이면 레이크(지나가는 줄이 튕김), 이보다 오래 짚고 있다가 밀면 벤딩입니다. " +
+                            "레이크가 벤딩으로 잡히면 늘리고, 벤딩하려고 기다리는 게 답답하면 줄이세요",
+                        color = TextDim,
+                        fontSize = 11.sp,
+                        lineHeight = 15.sp,
+                    )
                     ChoiceRow(
                         title = "벤딩 폭",
                         options = listOf(200 to "1음", 400 to "2음"),
@@ -122,12 +140,23 @@ fun SettingsScreen(
                         onChange = { on -> onCommit { it.copy(showNoteNames = on) } },
                     )
                 }
-                Section("오디오") {
+                Section("오디오 — 소리가 끊길 때만") {
+                    val info = remember(settings.audioBufferChunks) { audio.debugInfo() }
                     ChoiceRow(
-                        title = "버퍼 크기",
-                        options = Settings.BUFFER_CHUNKS.map { it to "×$it" },
+                        title = "미리 채워 두는 양",
+                        options = Settings.BUFFER_CHUNKS.map { chunks ->
+                            val ms = info.framesPerBuffer * chunks * 1000f / info.sampleRate
+                            chunks to "${ms.roundToInt()} ms"
+                        },
                         selected = settings.audioBufferChunks,
                         onSelect = { chunks -> onCommit { it.copy(audioBufferChunks = chunks) } },
+                    )
+                    Text(
+                        "소리를 얼마나 미리 만들어 두는지입니다. 작을수록 터치 후 소리가 빨리 나지만, 폰이 바쁠 때 \"지직\" 하고 끊길 수 있습니다. " +
+                            "끊기지 않으면 가장 작은 값 그대로 두세요. 아래 \"끊김\" 숫자가 올라가면 한 단계 키우면 됩니다",
+                        color = TextDim,
+                        fontSize = 11.sp,
+                        lineHeight = 15.sp,
                     )
                     DebugInfo(audio)
                 }
@@ -151,33 +180,42 @@ private fun Section(title: String, content: @Composable () -> Unit) {
     }
 }
 
+/** 0~1 값의 슬라이더. 값은 0~100으로 보여 준다. */
+@Composable
+private fun UnitSlider(
+    label: String,
+    value: Float,
+    onPreview: ((Settings) -> Settings) -> Unit,
+    onCommit: ((Settings) -> Settings) -> Unit,
+    set: (Settings, Float) -> Settings,
+) = LabeledSlider(label, value, 0f..1f, "${(value * 100).roundToInt()}", 44.dp, 30.dp, onPreview, onCommit, set)
+
 @Composable
 private fun LabeledSlider(
     label: String,
     value: Float,
+    range: ClosedFloatingPointRange<Float>,
+    valueText: String,
+    labelWidth: Dp,
+    valueWidth: Dp,
     onPreview: ((Settings) -> Settings) -> Unit,
     onCommit: ((Settings) -> Settings) -> Unit,
     set: (Settings, Float) -> Settings,
 ) {
     // 세로 360dp 화면에 슬라이더 셋과 시험음이 한 번에 보여야 한다 → 라벨·슬라이더·값을 한 줄에.
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(label, color = TextMain, fontSize = 13.sp, modifier = Modifier.width(44.dp))
+        Text(label, color = TextMain, fontSize = 13.sp, modifier = Modifier.width(labelWidth))
         Slider(
             value = value,
             onValueChange = { v -> onPreview { set(it, v) } },
             onValueChangeFinished = { onCommit { it } },
+            valueRange = range,
             modifier = Modifier
                 .weight(1f)
                 .height(34.dp),
             colors = SliderDefaults.colors(thumbColor = Accent, activeTrackColor = Accent, inactiveTrackColor = Chip),
         )
-        Text(
-            "${(value * 100).roundToInt()}",
-            color = TextDim,
-            fontSize = 13.sp,
-            textAlign = TextAlign.End,
-            modifier = Modifier.width(30.dp),
-        )
+        Text(valueText, color = TextDim, fontSize = 13.sp, textAlign = TextAlign.End, modifier = Modifier.width(valueWidth))
     }
 }
 
@@ -256,7 +294,7 @@ private fun DebugInfo(audio: AudioController) {
     val bufferMs = bufferFrames * 1000f / info.sampleRate
     Text(
         text = "${info.sampleRate} Hz · 버스트 ${info.framesPerBuffer} · 버퍼 $bufferFrames 프레임 (${"%.1f".format(bufferMs)} ms)\n" +
-            "언더런 ${info.underruns} · 버린 커맨드 ${info.droppedCommands} · ${if (info.running) "실행 중" else "정지"}",
+            "끊김 ${info.underruns}회 · 버린 커맨드 ${info.droppedCommands} · ${if (info.running) "실행 중" else "정지"}",
         color = TextDim,
         fontSize = 11.sp,
         fontFamily = FontFamily.Monospace,

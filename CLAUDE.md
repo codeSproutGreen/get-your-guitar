@@ -49,4 +49,4 @@ Android 앱 프로젝트 (베이스 지판 시뮬레이터). Kotlin 2.4 + Jetpac
 - **음색을 바꿀 때는 귀 대신 측정부터.** `ToneDemoRender`로 WAV를 뽑고 대역별 레벨(초저역 30~250 Hz / 중역 250 Hz~2 kHz / 고역)을 전후 비교한다. 폰 스피커는 중역만 재생하므로 중역이 줄면 폰에서는 나빠진 것이다(2026-09-21에 실제로 겪음: 물리적으로 맞는 파형으로 바꾸자 중역이 −4 dB). 최종 판단은 사람이 듣고 한다.
 - 커맨드 타입 번호(`CommandCodec`)는 한 번 정하면 바꾸지 않는다: 1 NoteOn, 2 Slide, 3 AllNotesOff, 4 SetMasterGain, 5 Bend, 6 NoteOff, 7 SetBrightness, 8 SetDecay.
 - `ToneParams` 같은 값 객체를 오디오 스레드에서 만들지 않는다. 엔진 → 보이스 경로는 Float 인자로 넘긴다.
-- 테스트로 설정을 바꿨으면 끝에 `adb shell pm clear com.sproutgreen.getyourguitar`로 폰을 기본값으로 되돌린다.
+- 테스트로 폰의 설정을 바꿨으면 **바꾼 값만** UI로 되돌린다. `pm clear`는 쓰지 않는다 — 사용자·클라이언트가 폰에서 직접 맞춰 둔 값까지 지운다(2026-09-21에 볼륨 100 · 밝기 71 · 감쇠 100 · 벤딩 2음으로 맞춰져 있는 걸 확인). 슬라이더 값은 `uiautomator dump`로 읽어 가며 맞춘다.

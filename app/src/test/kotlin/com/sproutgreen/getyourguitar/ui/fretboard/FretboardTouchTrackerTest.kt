@@ -407,4 +407,31 @@ class FretboardTouchTrackerTest {
         t.move(1L, 0, 3, y(0, 0.5f))
         assertEquals(Command.Bend(0, 400f), wide.last())
     }
+
+    // ---- 판정 시간은 설정에서 바꾼다 ----
+
+    /** 같은 손놀림(터치 150 ms 뒤에 0.3밴드 이동)이 판정 시간에 따라 벤딩도 레이크도 된다. */
+    @Test
+    fun `the settle time setting decides whether the same gesture is a bend or a rake`() {
+        fun play(settleMs: Long): List<Command> {
+            val out = mutableListOf<Command>()
+            var t = 0L
+            val tr = FretboardTouchTracker(send = { out += it }, clockMs = { t += 150; t })
+            tr.settleMs = settleMs
+            tr.down(1L, 2, 5, y(2))              // t = 150
+            tr.move(1L, 2, 5, y(2, 0.30f))       // 터치 후 150 ms
+            tr.move(1L, 1, 5, y(1, -0.30f))      // 옆 줄 영역으로
+            return out
+        }
+        val quick = play(settleMs = 100)  // 100 ms 안에는 가만히 있었다 → 짚은 손가락 → 벤딩
+        assertTrue(quick.any { it is Command.Bend } && quick.count { it is Command.NoteOn } == 1, "$quick")
+        val patient = play(settleMs = 400) // 400 ms 안에 0.3밴드 움직였다 → 레이크
+        assertEquals(listOf<Command>(Command.NoteOn(2, 5), Command.NoteOn(1, 5)), patient)
+    }
+
+    @Test
+    fun `the default settle time is 250 ms`() {
+        assertEquals(250L, FretboardTouchTracker.DEFAULT_SETTLE_MS)
+        assertEquals(250L, FretboardTouchTracker(send = {}).settleMs)
+    }
 }

@@ -34,6 +34,7 @@ class DataStoreSettingsRepository(private val store: DataStore<Preferences>) : S
             prefs[BRIGHTNESS] = next.brightness
             prefs[DECAY] = next.decay
             prefs[BEND_RANGE_CENTS] = next.bendRangeCents
+            prefs[RAKE_SETTLE_MS] = next.rakeSettleMs
             prefs[SHOW_NOTE_NAMES] = next.showNoteNames
             prefs[AUDIO_BUFFER_CHUNKS] = next.audioBufferChunks
         }
@@ -46,6 +47,7 @@ class DataStoreSettingsRepository(private val store: DataStore<Preferences>) : S
             brightness = this[BRIGHTNESS] ?: d.brightness,
             decay = this[DECAY] ?: d.decay,
             bendRangeCents = this[BEND_RANGE_CENTS] ?: d.bendRangeCents,
+            rakeSettleMs = this[RAKE_SETTLE_MS] ?: d.rakeSettleMs,
             showNoteNames = this[SHOW_NOTE_NAMES] ?: d.showNoteNames,
             audioBufferChunks = this[AUDIO_BUFFER_CHUNKS] ?: d.audioBufferChunks,
         ).sanitized()
@@ -56,6 +58,7 @@ class DataStoreSettingsRepository(private val store: DataStore<Preferences>) : S
         val BRIGHTNESS = floatPreferencesKey("brightness")
         val DECAY = floatPreferencesKey("decay")
         val BEND_RANGE_CENTS = intPreferencesKey("bend_range_cents")
+        val RAKE_SETTLE_MS = intPreferencesKey("rake_settle_ms")
         val SHOW_NOTE_NAMES = booleanPreferencesKey("show_note_names")
         val AUDIO_BUFFER_CHUNKS = intPreferencesKey("audio_buffer_chunks")
     }

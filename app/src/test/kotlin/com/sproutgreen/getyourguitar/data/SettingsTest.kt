@@ -24,6 +24,7 @@ class SettingsTest {
         val d = Settings.DEFAULT
         assertEquals(0.7f, d.decay)
         assertEquals(200, d.bendRangeCents)
+        assertEquals(250, d.rakeSettleMs)
         assertEquals(2, d.audioBufferChunks)
         assertFalse(d.showNoteNames)
         assertEquals(d, d.sanitized())
@@ -103,7 +104,7 @@ class SettingsTest {
 
     @Test
     fun `updates are persisted and read back`(@TempDir dir: File) {
-        val wanted = Settings(0.4f, 0.9f, 0.1f, bendRangeCents = 400, showNoteNames = true, audioBufferChunks = 3)
+        val wanted = Settings(0.4f, 0.9f, 0.1f, bendRangeCents = 400, rakeSettleMs = 380, showNoteNames = true, audioBufferChunks = 3)
         withRepository(dir) { repo ->
             repo.update { wanted }
             assertEquals(wanted, repo.settings.first())
@@ -147,5 +148,15 @@ class SettingsTest {
         } finally {
             scope.cancel()
         }
+    }
+
+    @Test
+    fun `rake settle time is clamped to 100 through 500 ms and is not an engine value`() {
+        assertEquals(100, Settings(rakeSettleMs = 5).sanitized().rakeSettleMs)
+        assertEquals(500, Settings(rakeSettleMs = 9_000).sanitized().rakeSettleMs)
+        assertEquals(330, Settings(rakeSettleMs = 330).sanitized().rakeSettleMs)
+        val a = Settings()
+        assertEquals(emptyList(), SettingsDiff.commands(a, a.copy(rakeSettleMs = 400)))
+        assertFalse(SettingsDiff.needsOutputRestart(a, a.copy(rakeSettleMs = 400)))
     }
 }

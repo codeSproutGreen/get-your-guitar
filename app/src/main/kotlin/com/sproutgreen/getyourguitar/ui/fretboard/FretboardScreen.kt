@@ -63,6 +63,7 @@ fun FretboardScreen(
     // 추적기와 상태는 컴포지션 밖의 평범한 객체라 설정이 바뀔 때마다 값을 밀어 넣는다.
     SideEffect {
         tracker.maxBendCents = settings.bendRangeCents.toFloat()
+        tracker.settleMs = settings.rakeSettleMs.toLong()
     }
 
     Column(

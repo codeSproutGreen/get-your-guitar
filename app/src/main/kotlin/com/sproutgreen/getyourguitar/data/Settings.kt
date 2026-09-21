@@ -13,6 +13,12 @@ data class Settings(
     val decay: Float = 0.7f,
     /** 최대 벤딩 폭. 200 = 온음, 400 = 두 온음. */
     val bendRangeCents: Int = 200,
+    /**
+     * 레이크와 벤딩을 가르는 시간(ms). 짚고 이 시간 안에 세로로 움직이면 레이크, 그동안 가만히 있었으면 이후의
+     * 세로 이동은 벤딩. 길수록 느린 레이크까지 잡지만 벤딩은 그만큼 기다렸다 밀어야 한다. 연주자마다 손버릇이
+     * 달라 설정으로 뺐다(클라이언트 요청 2026-09-21).
+     */
+    val rakeSettleMs: Int = 250,
     val showNoteNames: Boolean = false,
     /** 오디오 버퍼 = 기기 버스트 크기 × 이 값. 작을수록 지연이 짧고 끊길 위험이 크다. */
     val audioBufferChunks: Int = 2,
@@ -23,6 +29,7 @@ data class Settings(
         brightness = brightness.unit(DEFAULT.brightness),
         decay = decay.unit(DEFAULT.decay),
         bendRangeCents = if (bendRangeCents in BEND_RANGES) bendRangeCents else DEFAULT.bendRangeCents,
+        rakeSettleMs = rakeSettleMs.coerceIn(MIN_RAKE_SETTLE_MS, MAX_RAKE_SETTLE_MS),
         audioBufferChunks = if (audioBufferChunks in BUFFER_CHUNKS) audioBufferChunks else DEFAULT.audioBufferChunks,
     )
 
@@ -32,6 +39,8 @@ data class Settings(
         val DEFAULT = Settings()
         val BEND_RANGES = listOf(200, 400)
         val BUFFER_CHUNKS = listOf(2, 3, 4)
+        const val MIN_RAKE_SETTLE_MS = 100
+        const val MAX_RAKE_SETTLE_MS = 500
     }
 }
 
