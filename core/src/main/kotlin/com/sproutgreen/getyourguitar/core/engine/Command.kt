@@ -3,7 +3,7 @@ package com.sproutgreen.getyourguitar.core.engine
 /**
  * UI 스레드 → 오디오 스레드 메시지. UI 쪽에서는 객체로 다루고(할당 허용),
  * 큐를 건널 때 [CommandCodec]이 Int 4개로 풀어 오디오 스레드는 할당 없이 읽는다.
- * M2(음색·설정), M3(메트로놈)에서 종류가 늘어난다.
+ * M2(음색·설정), M3(메트로놈)에서 종류가 늘어난다. 타입 번호는 한 번 정하면 바꾸지 않는다.
  */
 sealed interface Command {
     /** 줄을 튕긴다. */
@@ -11,6 +11,12 @@ sealed interface Command {
 
     /** 다시 튕기지 않고 같은 줄의 음높이를 옮긴다. */
     data class Slide(val string: Int, val fret: Int) : Command
+
+    /**
+     * 현을 위아래로 밀어 음을 올린다. [cents]는 프렛 음 기준 상승량(0 = 벤딩 없음).
+     * 줄에 붙는 상태라서 같은 줄의 [Slide]에는 유지되고 [NoteOn]에서 0으로 돌아간다.
+     */
+    data class Bend(val string: Int, val cents: Float) : Command
 
     data object AllNotesOff : Command
 
@@ -23,17 +29,20 @@ object CommandCodec {
     const val TYPE_SLIDE = 2
     const val TYPE_ALL_NOTES_OFF = 3
     const val TYPE_SET_MASTER_GAIN = 4
+    const val TYPE_BEND = 5
 
     fun type(cmd: Command): Int = when (cmd) {
         is Command.NoteOn -> TYPE_NOTE_ON
         is Command.Slide -> TYPE_SLIDE
         Command.AllNotesOff -> TYPE_ALL_NOTES_OFF
         is Command.SetMasterGain -> TYPE_SET_MASTER_GAIN
+        is Command.Bend -> TYPE_BEND
     }
 
     fun argA(cmd: Command): Int = when (cmd) {
         is Command.NoteOn -> cmd.string
         is Command.Slide -> cmd.string
+        is Command.Bend -> cmd.string
         else -> 0
     }
 
@@ -45,6 +54,7 @@ object CommandCodec {
 
     fun floatBits(cmd: Command): Int = when (cmd) {
         is Command.SetMasterGain -> cmd.gain.toRawBits()
+        is Command.Bend -> cmd.cents.toRawBits()
         else -> 0
     }
 
@@ -54,6 +64,7 @@ object CommandCodec {
         TYPE_SLIDE -> Command.Slide(slot[1], slot[2])
         TYPE_ALL_NOTES_OFF -> Command.AllNotesOff
         TYPE_SET_MASTER_GAIN -> Command.SetMasterGain(Float.fromBits(slot[3]))
+        TYPE_BEND -> Command.Bend(slot[1], Float.fromBits(slot[3]))
         else -> throw IllegalArgumentException("unknown command type ${slot[0]}")
     }
 }

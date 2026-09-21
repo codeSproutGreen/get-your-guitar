@@ -121,4 +121,87 @@ class SynthEngineTest {
         assertTrue(e.send(Command.NoteOn(0, 0)))
         assertEquals(rejected, e.stats.droppedCommands)
     }
+
+    // ---- 벤딩 ----
+
+    /** 커맨드를 순서대로 보낸 뒤 1초를 렌더해 기본 주파수가 기대값(±1%)인지 본다. */
+    private fun assertPitch(expectedHz: Float, vararg commands: Command) {
+        val e = engine()
+        for (c in commands) e.send(c)
+        val out = render(e, sr)
+        assertHz(expectedHz, SignalAnalysis.estimateHz(out, sr, expectedHz, from = 4000, length = 24_000))
+    }
+
+    @Test
+    fun `bending 100 cents sounds one fret higher`() {
+        assertPitch(Pitch.hz(38 + 1), Command.NoteOn(1, 5), Command.Bend(1, 100f))
+    }
+
+    @Test
+    fun `bending 200 cents sounds two frets higher`() {
+        assertPitch(Pitch.hz(38 + 2), Command.NoteOn(1, 5), Command.Bend(1, 200f))
+    }
+
+    @Test
+    fun `bend is continuous so 50 cents lands between two frets`() {
+        val quarterToneUp = Pitch.hz(38) * Math.pow(2.0, 50.0 / 1200.0).toFloat()
+        assertPitch(quarterToneUp, Command.NoteOn(1, 5), Command.Bend(1, 50f))
+    }
+
+    @Test
+    fun `releasing the bend returns to the fretted pitch`() {
+        assertPitch(Pitch.hz(38), Command.NoteOn(1, 5), Command.Bend(1, 200f), Command.Bend(1, 0f))
+    }
+
+    @Test
+    fun `a new pluck starts unbent`() {
+        assertPitch(Pitch.hz(38), Command.NoteOn(1, 5), Command.Bend(1, 200f), Command.NoteOn(1, 5))
+    }
+
+    @Test
+    fun `sliding while bent keeps the bend`() {
+        assertPitch(Pitch.hz(40 + 1), Command.NoteOn(1, 5), Command.Bend(1, 100f), Command.Slide(1, 7))
+    }
+
+    @Test
+    fun `bend only affects its own string`() {
+        assertPitch(Pitch.hz(28 + 3), Command.NoteOn(0, 3), Command.Bend(1, 200f))
+    }
+
+    @Test
+    fun `bend is clamped to zero through the maximum`() {
+        val max = SynthEngine.MAX_BEND_CENTS
+        assertEquals(400f, max)
+        assertPitch(Pitch.hz(38 + 4), Command.NoteOn(1, 5), Command.Bend(1, 5000f))
+        assertPitch(Pitch.hz(38), Command.NoteOn(1, 5), Command.Bend(1, -300f))
+    }
+
+    @Test
+    fun `bending a silent or nonexistent string makes no sound and does not crash`() {
+        val e = engine()
+        e.send(Command.Bend(2, 150f))
+        e.send(Command.Bend(9, 150f))
+        e.send(Command.Bend(-1, 150f))
+        e.send(Command.Bend(0, Float.NaN))
+        assertEquals(0f, SignalAnalysis.peak(render(e, 4800)))
+    }
+
+    @Test
+    fun `a continuous bend sweep stays free of clicks`() {
+        val e = engine()
+        e.send(Command.NoteOn(1, 5))
+        val steady = render(e, sr / 4)
+        val steadyStep = SignalAnalysis.maxStep(steady, sr / 8, sr / 4)
+        // 터치 이벤트처럼 약 8 ms마다 조금씩 올렸다가 내린다.
+        val pieces = ArrayList<FloatArray>()
+        for (i in 0..40) {
+            val cents = if (i <= 20) i * 10f else (40 - i) * 10f
+            e.send(Command.Bend(1, cents))
+            pieces += render(e, 384)
+        }
+        val sweep = FloatArray(pieces.sumOf { it.size })
+        var at = 0
+        for (piece in pieces) { System.arraycopy(piece, 0, sweep, at, piece.size); at += piece.size }
+        assertTrue(SignalAnalysis.maxStep(sweep) < steadyStep * 2f, "bend sweep clicked")
+    }
 }
