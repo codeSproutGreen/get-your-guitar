@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -43,13 +44,14 @@ private val ErrorColor = Color(0xFFFF6B5E)
 @Composable
 fun FretboardScreen(
     audio: AudioController,
+    /** 화면 전환 바깥에서 기억한다. 여기서 만들면 설정에 다녀올 때마다 스크롤 위치가 처음으로 돌아간다. */
+    state: FretboardState,
     settings: Settings,
     onToggleNoteNames: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val fretboard = remember { Fretboard(Tuning.STANDARD_BASS_4) }
-    val state = remember { FretboardState() }
     val tracker = remember(audio, state) {
         FretboardTouchTracker(
             send = audio::send,
@@ -64,6 +66,13 @@ fun FretboardScreen(
     SideEffect {
         tracker.maxBendCents = settings.bendRangeCents.toFloat()
         tracker.settleMs = settings.rakeSettleMs.toLong()
+        state.layoutKind = settings.fretLayout
+    }
+
+    // 실제 간격은 스크롤 한계가 훨씬 짧다(12 → 5). 등간격에서 끝까지 가 있다가 바꾸면 지판 밖을 보게 된다.
+    LaunchedEffect(settings.fretLayout) {
+        state.layoutKind = settings.fretLayout
+        state.clampTo(FretboardGeometry(1f, 1f, layoutKind = settings.fretLayout))
     }
 
     Column(

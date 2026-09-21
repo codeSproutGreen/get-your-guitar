@@ -12,6 +12,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.core.view.WindowCompat
@@ -24,6 +25,7 @@ import androidx.lifecycle.lifecycleScope
 import com.sproutgreen.getyourguitar.audio.AudioController
 import com.sproutgreen.getyourguitar.data.DataStoreSettingsRepository
 import com.sproutgreen.getyourguitar.ui.fretboard.FretboardScreen
+import com.sproutgreen.getyourguitar.ui.fretboard.FretboardState
 import com.sproutgreen.getyourguitar.ui.settings.SettingsScreen
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -55,10 +57,12 @@ class MainActivity : ComponentActivity() {
             MaterialTheme(colorScheme = darkColorScheme()) {
                 // 화면은 둘뿐이라 내비게이션 라이브러리 없이 상태 하나로 전환한다. 설정 화면에서도 오디오는 계속 돈다.
                 var screen by rememberSaveable { mutableStateOf(Screen.FRETBOARD) }
+                val fretboardState = remember { FretboardState() } // 설정에 다녀와도 스크롤 위치를 잃지 않게 여기서 기억한다
                 BackHandler(enabled = screen == Screen.SETTINGS) { screen = Screen.FRETBOARD }
                 when (screen) {
                     Screen.FRETBOARD -> FretboardScreen(
                         audio = audio,
+                        state = fretboardState,
                         settings = app.settings,
                         onToggleNoteNames = { app.commit { it.copy(showNoteNames = !it.showNoteNames) } },
                         onOpenSettings = { screen = Screen.SETTINGS },

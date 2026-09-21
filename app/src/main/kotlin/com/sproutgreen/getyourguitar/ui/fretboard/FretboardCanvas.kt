@@ -24,8 +24,6 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sproutgreen.getyourguitar.core.music.Fretboard
-import kotlin.math.ceil
-import kotlin.math.floor
 import kotlin.math.min
 
 private val StripColor = Color(0xFF17120E)
@@ -71,10 +69,13 @@ fun FretboardCanvas(
     }
 
     Canvas(modifier) {
-        val geometry = FretboardGeometry(size.width, size.height, fretboard.tuning.stringCount, fretboard.fretCount)
+        val geometry = FretboardGeometry(
+            size.width, size.height, fretboard.tuning.stringCount, fretboard.fretCount, layoutKind = state.layoutKind,
+        )
         val layout = geometry.layout(state.scroll)
-        val firstFret = floor(state.scroll).toInt().coerceAtLeast(0)
-        val lastFret = (ceil(state.scroll).toInt() + geometry.visibleCells).coerceAtMost(fretboard.fretCount)
+        // 화면에 걸친 셀의 범위. 실제 간격에서는 한 화면에 들어오는 프렛 수가 위치마다 다르다.
+        val firstFret = geometry.fretAt(0f, layout)
+        val lastFret = geometry.fretAt(size.width, layout)
 
         drawBoard(geometry, layout, firstFret, lastFret)
         drawStrips(geometry, layout, firstFret, lastFret, textMeasurer)
@@ -98,16 +99,25 @@ private fun DrawScope.drawBoard(geometry: FretboardGeometry, layout: FretLayout,
         drawRect(HeadColor, Offset(0f, geometry.boardTop), Size(min(nutX, size.width), geometry.boardHeight))
     }
 
-    val markRadius = min(geometry.cellWidth, geometry.bandHeight) * 0.13f
+    // 마지막 와이어 오른쪽은 바디다(실제 간격에서 끝까지 스크롤하면 보인다).
+    val endX = layout.xOf(geometry.fretCount.toFloat())
+    if (endX < size.width) {
+        drawRect(HeadColor, Offset(endX, geometry.boardTop), Size(size.width - endX, geometry.boardHeight))
+    }
+
     val centerY = geometry.boardTop + geometry.boardHeight / 2f
     for (fret in SINGLE_MARKS) {
-        if (fret in firstFret..lastFret) drawCircle(MarkColor, markRadius, Offset(geometry.cellCenterX(fret, layout), centerY))
+        if (fret in firstFret..lastFret) {
+            val radius = min(geometry.cellWidthAt(fret, layout), geometry.bandHeight) * 0.13f
+            drawCircle(MarkColor, radius, Offset(geometry.cellCenterX(fret, layout), centerY))
+        }
     }
     for (fret in DOUBLE_MARKS) {
         if (fret in firstFret..lastFret) {
             val x = geometry.cellCenterX(fret, layout)
-            drawCircle(MarkColor, markRadius, Offset(x, geometry.boardTop + geometry.bandHeight))
-            drawCircle(MarkColor, markRadius, Offset(x, geometry.boardBottom - geometry.bandHeight))
+            val radius = min(geometry.cellWidthAt(fret, layout), geometry.bandHeight) * 0.13f
+            drawCircle(MarkColor, radius, Offset(x, geometry.boardTop + geometry.bandHeight))
+            drawCircle(MarkColor, radius, Offset(x, geometry.boardBottom - geometry.bandHeight))
         }
     }
 
@@ -186,8 +196,8 @@ private fun DrawScope.drawHighlights(
     highlights: List<Highlight>,
     nowNanos: Long,
 ) {
-    val radius = min(geometry.cellWidth, geometry.bandHeight) * 0.34f
     for (h in highlights) {
+        val radius = min(geometry.cellWidthAt(h.fret, layout), geometry.bandHeight) * 0.34f
         val age = (nowNanos - h.startNanos).coerceAtLeast(0L).toFloat() / h.fadeNanos
         val alpha = if (h.held) 1f else (1f - age).coerceIn(0f, 1f)
         if (alpha <= 0f) continue
@@ -208,9 +218,11 @@ private fun DrawScope.drawNoteNames(
     textMeasurer: TextMeasurer,
 ) {
     val style = TextStyle(color = NameText, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-    val bubble = min(geometry.cellWidth, geometry.bandHeight) * 0.2f
     for (fret in firstFret..lastFret) {
         val x = geometry.cellCenterX(fret, layout)
+        val cell = geometry.cellWidthAt(fret, layout)
+        // 좁은 칸(실제 간격의 높은 프렛)에서는 원이 옆 칸을 침범하지 않게 칸 폭에 맞춘다.
+        val bubble = min(cell * 0.46f, geometry.bandHeight * 0.2f)
         if (x < -bubble || x > size.width + bubble) continue
         for (string in 0 until geometry.stringCount) {
             val y = geometry.stringCenterY(string)

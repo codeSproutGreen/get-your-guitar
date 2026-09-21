@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.sproutgreen.getyourguitar.data.FretLayoutKind
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -29,6 +30,9 @@ class FretboardState {
     /** 화면 왼쪽 끝의 지판 좌표 u. −1(개방현 + 1~11프렛) ~ 12(13~24프렛). */
     var scroll by mutableFloatStateOf(FretboardGeometry.MIN_SCROLL)
         private set
+
+    /** 프렛 간격. 설정에서 온다. 제스처와 그리기가 같은 값을 봐야 터치한 곳과 보이는 곳이 일치한다. */
+    var layoutKind by mutableStateOf(FretLayoutKind.EQUAL)
 
     val highlights = mutableStateListOf<Highlight>()
 
@@ -51,8 +55,14 @@ class FretboardState {
         settleJob = null
     }
 
-    fun dragBy(deltaCells: Float, geometry: FretboardGeometry) {
-        scroll = geometry.clampScroll(scroll + deltaCells)
+    /** 띠를 [dxPixels]만큼 끌었다. 셀 폭이 일정하지 않을 수 있으므로 환산은 기하에 맡긴다. */
+    fun dragBy(dxPixels: Float, geometry: FretboardGeometry) {
+        scroll = geometry.scrollAfterDrag(scroll, dxPixels)
+    }
+
+    /** 프렛 간격을 바꾸면 스크롤 한계도 바뀐다(실제 간격은 훨씬 짧다). */
+    fun clampTo(geometry: FretboardGeometry) {
+        scroll = geometry.clampScroll(scroll)
     }
 
     /** 손을 떼면 가장 가까운 프렛 경계로 150 ms 스냅. */

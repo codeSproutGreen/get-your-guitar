@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
@@ -35,6 +36,7 @@ class DataStoreSettingsRepository(private val store: DataStore<Preferences>) : S
             prefs[DECAY] = next.decay
             prefs[BEND_RANGE_CENTS] = next.bendRangeCents
             prefs[RAKE_SETTLE_MS] = next.rakeSettleMs
+            prefs[FRET_LAYOUT] = next.fretLayout.name
             prefs[SHOW_NOTE_NAMES] = next.showNoteNames
             prefs[AUDIO_BUFFER_CHUNKS] = next.audioBufferChunks
         }
@@ -48,6 +50,8 @@ class DataStoreSettingsRepository(private val store: DataStore<Preferences>) : S
             decay = this[DECAY] ?: d.decay,
             bendRangeCents = this[BEND_RANGE_CENTS] ?: d.bendRangeCents,
             rakeSettleMs = this[RAKE_SETTLE_MS] ?: d.rakeSettleMs,
+            // 모르는 이름(나중 버전이 쓴 값, 손상)은 기본값으로.
+            fretLayout = FretLayoutKind.entries.firstOrNull { it.name == this[FRET_LAYOUT] } ?: d.fretLayout,
             showNoteNames = this[SHOW_NOTE_NAMES] ?: d.showNoteNames,
             audioBufferChunks = this[AUDIO_BUFFER_CHUNKS] ?: d.audioBufferChunks,
         ).sanitized()
@@ -59,6 +63,7 @@ class DataStoreSettingsRepository(private val store: DataStore<Preferences>) : S
         val DECAY = floatPreferencesKey("decay")
         val BEND_RANGE_CENTS = intPreferencesKey("bend_range_cents")
         val RAKE_SETTLE_MS = intPreferencesKey("rake_settle_ms")
+        val FRET_LAYOUT = stringPreferencesKey("fret_layout")
         val SHOW_NOTE_NAMES = booleanPreferencesKey("show_note_names")
         val AUDIO_BUFFER_CHUNKS = intPreferencesKey("audio_buffer_chunks")
     }

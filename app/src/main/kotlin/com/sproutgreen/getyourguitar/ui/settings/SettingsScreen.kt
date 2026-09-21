@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sproutgreen.getyourguitar.audio.AudioController
 import com.sproutgreen.getyourguitar.core.engine.Command
+import com.sproutgreen.getyourguitar.data.FretLayoutKind
 import com.sproutgreen.getyourguitar.data.Settings
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
@@ -123,6 +124,18 @@ fun SettingsScreen(
                     Text(
                         "줄을 짚고 이 시간 안에 위아래로 움직이면 레이크(지나가는 줄이 튕김), 이보다 오래 짚고 있다가 밀면 벤딩입니다. " +
                             "레이크가 벤딩으로 잡히면 늘리고, 벤딩하려고 기다리는 게 답답하면 줄이세요",
+                        color = TextDim,
+                        fontSize = 11.sp,
+                        lineHeight = 15.sp,
+                    )
+                    ChoiceRow(
+                        title = "프렛 간격",
+                        options = listOf(FretLayoutKind.EQUAL to "등간격", FretLayoutKind.REAL to "실제"),
+                        selected = settings.fretLayout,
+                        onSelect = { kind -> onCommit { it.copy(fretLayout = kind) } },
+                    )
+                    Text(
+                        "실제: 진짜 베이스처럼 높은 프렛일수록 칸이 좁아집니다(24프렛은 1프렛의 약 1/4)",
                         color = TextDim,
                         fontSize = 11.sp,
                         lineHeight = 15.sp,
@@ -249,7 +262,7 @@ private fun Pill(text: String, selected: Boolean, onClick: () -> Unit) {
             .clip(RoundedCornerShape(50))
             .background(if (selected) Accent else Chip)
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 7.dp),
+            .padding(horizontal = 12.dp, vertical = 7.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(text, color = if (selected) Color.Black else TextMain, fontSize = 13.sp, fontWeight = FontWeight.Medium)

@@ -4,6 +4,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import com.sproutgreen.getyourguitar.core.engine.Command
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -25,6 +26,7 @@ class SettingsTest {
         assertEquals(0.7f, d.decay)
         assertEquals(200, d.bendRangeCents)
         assertEquals(250, d.rakeSettleMs)
+        assertEquals(FretLayoutKind.EQUAL, d.fretLayout)
         assertEquals(2, d.audioBufferChunks)
         assertFalse(d.showNoteNames)
         assertEquals(d, d.sanitized())
@@ -104,7 +106,10 @@ class SettingsTest {
 
     @Test
     fun `updates are persisted and read back`(@TempDir dir: File) {
-        val wanted = Settings(0.4f, 0.9f, 0.1f, bendRangeCents = 400, rakeSettleMs = 380, showNoteNames = true, audioBufferChunks = 3)
+        val wanted = Settings(
+            0.4f, 0.9f, 0.1f, bendRangeCents = 400, rakeSettleMs = 380,
+            fretLayout = FretLayoutKind.REAL, showNoteNames = true, audioBufferChunks = 3,
+        )
         withRepository(dir) { repo ->
             repo.update { wanted }
             assertEquals(wanted, repo.settings.first())
@@ -158,5 +163,27 @@ class SettingsTest {
         val a = Settings()
         assertEquals(emptyList(), SettingsDiff.commands(a, a.copy(rakeSettleMs = 400)))
         assertFalse(SettingsDiff.needsOutputRestart(a, a.copy(rakeSettleMs = 400)))
+    }
+
+    @Test
+    fun `fret layout is a ui-only setting`() {
+        val a = Settings()
+        val b = a.copy(fretLayout = FretLayoutKind.REAL)
+        assertEquals(emptyList(), SettingsDiff.commands(a, b))
+        assertFalse(SettingsDiff.needsOutputRestart(a, b))
+    }
+
+    @Test
+    fun `an unknown stored fret layout falls back to equal spacing`(@TempDir dir: File) {
+        val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+        try {
+            val store = PreferenceDataStoreFactory.create(scope = scope) { File(dir, "settings.preferences_pb") }
+            runBlocking {
+                store.edit { it[stringPreferencesKey("fret_layout")] = "FANNED" } // 나중 버전이 쓴 값일 수도 있다
+                assertEquals(FretLayoutKind.EQUAL, DataStoreSettingsRepository(store).settings.first().fretLayout)
+            }
+        } finally {
+            scope.cancel()
+        }
     }
 }

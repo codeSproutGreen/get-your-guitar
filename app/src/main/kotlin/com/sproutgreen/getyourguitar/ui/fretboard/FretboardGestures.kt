@@ -25,7 +25,7 @@ fun Modifier.fretboardGestures(
         awaitPointerEventScope {
             while (true) {
                 val event = awaitPointerEvent()
-                val geometry = FretboardGeometry(size.width.toFloat(), size.height.toFloat())
+                val geometry = FretboardGeometry(size.width.toFloat(), size.height.toFloat(), layoutKind = state.layoutKind)
                 for (change in event.changes) {
                     val id = change.id.value
                     val x = change.position.x
@@ -69,7 +69,7 @@ fun Modifier.fretboardGestures(
 
                         else -> {
                             if (id in scrollPointers) {
-                                state.dragBy(-change.positionChange().x / geometry.cellWidth, geometry)
+                                state.dragBy(change.positionChange().x, geometry)
                             } else if (id in mutePointers) {
                                 // 뮤트 바 위에서 움직이는 건 의미 없다.
                             } else if (change.positionChange().x != 0f || change.positionChange().y != 0f) {

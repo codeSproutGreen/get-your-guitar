@@ -2,9 +2,18 @@ package com.sproutgreen.getyourguitar.data
 
 import com.sproutgreen.getyourguitar.core.engine.Command
 
+/** 프렛 와이어의 가로 간격. */
+enum class FretLayoutKind {
+    /** 모든 프렛의 폭이 같다. 누르기 쉽다. 기본값. */
+    EQUAL,
+
+    /** 실제 악기처럼 바디 쪽으로 갈수록 좁아진다(한 프렛마다 약 5.6%). 실물 연습용. */
+    REAL,
+}
+
 /**
  * 사용자가 바꿀 수 있는 모든 값. 저장소([SettingsRepository])를 거쳐 재시작 후에도 유지된다.
- * 메트로놈·프렛 간격 설정은 그 기능을 만들 때 추가한다(Preferences DataStore는 키 추가에 마이그레이션이 필요 없다).
+ * 메트로놈 설정은 그 기능을 만들 때 추가한다(Preferences DataStore는 키 추가에 마이그레이션이 필요 없다).
  */
 data class Settings(
     val masterVolume: Float = 0.8f,
@@ -19,6 +28,7 @@ data class Settings(
      * 달라 설정으로 뺐다(클라이언트 요청 2026-09-21).
      */
     val rakeSettleMs: Int = 250,
+    val fretLayout: FretLayoutKind = FretLayoutKind.EQUAL,
     val showNoteNames: Boolean = false,
     /** 오디오 버퍼 = 기기 버스트 크기 × 이 값. 작을수록 지연이 짧고 끊길 위험이 크다. */
     val audioBufferChunks: Int = 2,

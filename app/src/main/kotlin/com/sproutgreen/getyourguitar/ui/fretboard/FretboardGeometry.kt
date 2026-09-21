@@ -1,5 +1,6 @@
 package com.sproutgreen.getyourguitar.ui.fretboard
 
+import com.sproutgreen.getyourguitar.data.FretLayoutKind
 import kotlin.math.floor
 
 /**
@@ -9,6 +10,9 @@ import kotlin.math.floor
  * 상단 바를 뺀 이 영역 안에서 띠는 8/88, 뮤트 바는 14/88이다. 뮤트 바는 연주하면서 엄지로 누르고 있어야 해서
  * 띠보다 두껍다(S10e에서 약 8 mm).
  * 판정 범위는 넉넉하다: 줄은 밴드 전체 높이, 프렛은 셀 전체 폭.
+ *
+ * 가로 방향은 [layoutKind]에 따라 등간격 또는 실제 프렛 간격이다. 셀 폭이 일정하다고 가정하는 코드는 여기 밖에
+ * 두지 않는다 — 폭이 필요하면 [cellWidthAt], 드래그 환산은 [scrollAfterDrag]를 쓴다.
  */
 class FretboardGeometry(
     val width: Float,
@@ -16,6 +20,7 @@ class FretboardGeometry(
     val stringCount: Int = 4,
     val fretCount: Int = 24,
     val visibleCells: Int = 12,
+    val layoutKind: FretLayoutKind = FretLayoutKind.EQUAL,
 ) {
     val stripHeight: Float = height * STRIP_FRACTION
     val muteBarHeight: Float = height * MUTE_BAR_FRACTION
@@ -23,12 +28,34 @@ class FretboardGeometry(
     val boardBottom: Float = height - muteBarHeight
     val boardHeight: Float = boardBottom - boardTop
     val bandHeight: Float = boardHeight / stringCount
-    val cellWidth: Float = width / visibleCells
-    val maxScroll: Float = (fretCount - visibleCells).toFloat()
 
-    fun layout(scroll: Float): FretLayout = EqualFretLayout(cellWidth, scroll)
+    /** 등간격일 때의 셀 폭. 실제 간격에서는 평균값일 뿐이니 [cellWidthAt]을 쓸 것. */
+    val cellWidth: Float = width / visibleCells
+
+    /**
+     * 스크롤 한계(화면 왼쪽 끝의 u). 등간격은 마지막 12칸이 화면에 꽉 차는 지점. 실제 간격은 높은 프렛일수록 칸이
+     * 좁아 더 많이 들어오므로, 마지막 와이어가 화면에 들어오는 가장 작은 정수에서 멈춘다(스냅이 정수 단위라서).
+     */
+    val maxScroll: Float = when (layoutKind) {
+        FretLayoutKind.EQUAL -> (fretCount - visibleCells).toFloat()
+        FretLayoutKind.REAL -> {
+            val span = RealFretLayout.viewSpan(visibleCells)
+            val end = RealFretLayout.distance(fretCount.toFloat())
+            var scroll = MIN_SCROLL.toInt()
+            while (scroll < fretCount && RealFretLayout.distance(scroll.toFloat()) + span < end - 1e-4f) scroll++
+            scroll.toFloat()
+        }
+    }
+
+    fun layout(scroll: Float): FretLayout = when (layoutKind) {
+        FretLayoutKind.EQUAL -> EqualFretLayout(cellWidth, scroll)
+        FretLayoutKind.REAL -> RealFretLayout(width, scroll, visibleCells)
+    }
 
     fun clampScroll(scroll: Float): Float = scroll.coerceIn(MIN_SCROLL, maxScroll)
+
+    /** 띠를 [dxPixels]만큼 끌었을 때의 새 스크롤. 지판이 손가락에 붙어 따라오도록 픽셀 거리를 그대로 보존한다. */
+    fun scrollAfterDrag(scroll: Float, dxPixels: Float): Float = clampScroll(layout(scroll).uAt(-dxPixels))
 
     fun isOnBoard(y: Float): Boolean = y >= boardTop && y < boardBottom
 
@@ -56,7 +83,10 @@ class FretboardGeometry(
     fun fretAt(x: Float, layout: FretLayout): Int =
         (floor(layout.uAt(x)).toInt() + 1).coerceIn(0, fretCount)
 
-    fun cellCenterX(fret: Int, layout: FretLayout): Float = layout.xOf(fret - 0.5f)
+    /** 셀의 가운데 = 양쪽 와이어의 중점. 실제 간격에서는 u의 중점(n − 0.5)과 화면상의 중점이 다르다. */
+    fun cellCenterX(fret: Int, layout: FretLayout): Float = (layout.xOf(fret - 1f) + layout.xOf(fret.toFloat())) / 2f
+
+    fun cellWidthAt(fret: Int, layout: FretLayout): Float = layout.xOf(fret.toFloat()) - layout.xOf(fret - 1f)
 
     companion object {
         const val MIN_SCROLL = -1f
