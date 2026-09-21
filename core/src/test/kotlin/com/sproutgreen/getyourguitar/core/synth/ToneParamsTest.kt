@@ -50,4 +50,13 @@ class ToneParamsTest {
         assertEquals(tone.cutoffHz(), tone.cutoffHz(noteHz = 20f), 1f)
         assertTrue(tone.cutoffHz(noteHz = 5000f) <= ToneParams.MAX_TRACKED_CUTOFF_HZ)
     }
+
+    @Test
+    fun `pure mapping functions agree with the value object and clamp their input`() {
+        val tone = ToneParams(0.3f, 0.9f)
+        assertEquals(tone.cutoffHz(100f), ToneParams.cutoffHz(0.3f, 100f), 1e-3f)
+        assertEquals(tone.feedback(), ToneParams.feedback(0.9f), 0f)
+        assertEquals(ToneParams.cutoffHz(1f, 41.2f), ToneParams.cutoffHz(9f, 41.2f), 1e-3f)
+        assertEquals(ToneParams.feedback(0f), ToneParams.feedback(-4f), 0f)
+    }
 }

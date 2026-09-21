@@ -18,9 +18,18 @@ sealed interface Command {
      */
     data class Bend(val string: Int, val cents: Float) : Command
 
+    /** 손가락을 뗐다 — 그 줄을 뮤트한다("누르고 있는 동안만 소리" 모드에서 UI가 보낸다). */
+    data class NoteOff(val string: Int) : Command
+
     data object AllNotesOff : Command
 
     data class SetMasterGain(val gain: Float) : Command
+
+    /** 0~1. 루프 로우패스 컷오프(밝기). */
+    data class SetBrightness(val value: Float) : Command
+
+    /** 0~1. 루프 피드백(누르고 있을 때 음이 버티는 길이). */
+    data class SetDecay(val value: Float) : Command
 }
 
 /** 슬롯 레이아웃: [type, a, b, floatBits]. */
@@ -30,6 +39,9 @@ object CommandCodec {
     const val TYPE_ALL_NOTES_OFF = 3
     const val TYPE_SET_MASTER_GAIN = 4
     const val TYPE_BEND = 5
+    const val TYPE_NOTE_OFF = 6
+    const val TYPE_SET_BRIGHTNESS = 7
+    const val TYPE_SET_DECAY = 8
 
     fun type(cmd: Command): Int = when (cmd) {
         is Command.NoteOn -> TYPE_NOTE_ON
@@ -37,12 +49,16 @@ object CommandCodec {
         Command.AllNotesOff -> TYPE_ALL_NOTES_OFF
         is Command.SetMasterGain -> TYPE_SET_MASTER_GAIN
         is Command.Bend -> TYPE_BEND
+        is Command.NoteOff -> TYPE_NOTE_OFF
+        is Command.SetBrightness -> TYPE_SET_BRIGHTNESS
+        is Command.SetDecay -> TYPE_SET_DECAY
     }
 
     fun argA(cmd: Command): Int = when (cmd) {
         is Command.NoteOn -> cmd.string
         is Command.Slide -> cmd.string
         is Command.Bend -> cmd.string
+        is Command.NoteOff -> cmd.string
         else -> 0
     }
 
@@ -55,6 +71,8 @@ object CommandCodec {
     fun floatBits(cmd: Command): Int = when (cmd) {
         is Command.SetMasterGain -> cmd.gain.toRawBits()
         is Command.Bend -> cmd.cents.toRawBits()
+        is Command.SetBrightness -> cmd.value.toRawBits()
+        is Command.SetDecay -> cmd.value.toRawBits()
         else -> 0
     }
 
@@ -65,6 +83,9 @@ object CommandCodec {
         TYPE_ALL_NOTES_OFF -> Command.AllNotesOff
         TYPE_SET_MASTER_GAIN -> Command.SetMasterGain(Float.fromBits(slot[3]))
         TYPE_BEND -> Command.Bend(slot[1], Float.fromBits(slot[3]))
+        TYPE_NOTE_OFF -> Command.NoteOff(slot[1])
+        TYPE_SET_BRIGHTNESS -> Command.SetBrightness(Float.fromBits(slot[3]))
+        TYPE_SET_DECAY -> Command.SetDecay(Float.fromBits(slot[3]))
         else -> throw IllegalArgumentException("unknown command type ${slot[0]}")
     }
 }

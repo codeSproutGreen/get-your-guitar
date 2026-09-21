@@ -9,7 +9,7 @@ class ToneParams(brightness: Float, decay: Float) {
     val decay: Float = decay.coerceIn(0f, 1f)
 
     /** 루프 로우패스 컷오프. 500 Hz ~ 6 kHz 로그 보간. */
-    fun cutoffHz(): Float = MIN_CUTOFF_HZ * (MAX_CUTOFF_HZ / MIN_CUTOFF_HZ).pow(brightness)
+    fun cutoffHz(): Float = baseCutoffHz(brightness)
 
     /**
      * [noteHz]를 연주할 때의 루프 컷오프. 기준음(E1) 위에서는 음높이의 제곱근에 비례해 올라간다.
@@ -18,13 +18,10 @@ class ToneParams(brightness: Float, decay: Float) {
      * 세제곱으로 커진다(기본 톤에서 E1 −8 dB/s, G4 −56 dB/s — 실기기에서 "고음이 짧다"는 피드백).
      * 완전 비례(배음 수 고정)로 하면 밝기 값의 의미가 음역마다 달라지므로 제곱근으로 절충한다.
      */
-    fun cutoffHz(noteHz: Float): Float {
-        val ratio = (noteHz / TRACKING_REFERENCE_HZ).coerceAtLeast(1f)
-        return (cutoffHz() * sqrt(ratio)).coerceAtMost(MAX_TRACKED_CUTOFF_HZ)
-    }
+    fun cutoffHz(noteHz: Float): Float = cutoffHz(brightness, noteHz)
 
     /** 루프 피드백 게인. 0.990 ~ 0.9995 선형 보간. */
-    fun feedback(): Float = MIN_FEEDBACK + decay * (MAX_FEEDBACK - MIN_FEEDBACK)
+    fun feedback(): Float = feedback(decay)
 
     companion object {
         const val MIN_CUTOFF_HZ = 500f
@@ -37,5 +34,17 @@ class ToneParams(brightness: Float, decay: Float) {
         const val MAX_TRACKED_CUTOFF_HZ = 12_000f
 
         val DEFAULT = ToneParams(brightness = 0.6f, decay = 0.7f)
+
+        // 아래는 객체 없이 쓰는 순수 함수. 오디오 스레드는 ToneParams를 만들 수 없으므로(할당 금지) 이쪽을 부른다.
+
+        private fun baseCutoffHz(brightness: Float): Float =
+            MIN_CUTOFF_HZ * (MAX_CUTOFF_HZ / MIN_CUTOFF_HZ).pow(brightness.coerceIn(0f, 1f))
+
+        fun cutoffHz(brightness: Float, noteHz: Float): Float {
+            val ratio = (noteHz / TRACKING_REFERENCE_HZ).coerceAtLeast(1f)
+            return (baseCutoffHz(brightness) * sqrt(ratio)).coerceAtMost(MAX_TRACKED_CUTOFF_HZ)
+        }
+
+        fun feedback(decay: Float): Float = MIN_FEEDBACK + decay.coerceIn(0f, 1f) * (MAX_FEEDBACK - MIN_FEEDBACK)
     }
 }

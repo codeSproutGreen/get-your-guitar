@@ -5,6 +5,7 @@ import com.sproutgreen.getyourguitar.core.music.Tuning
 import com.sproutgreen.getyourguitar.core.synth.AmpFilter
 import com.sproutgreen.getyourguitar.core.synth.Mixer
 import com.sproutgreen.getyourguitar.core.synth.StringVoices
+import com.sproutgreen.getyourguitar.core.synth.ToneParams
 import com.sproutgreen.getyourguitar.core.synth.VoiceCharacter
 
 /** 오디오 스레드가 쓰고 UI가 읽는 통계. 콜백 없이 폴링한다. */
@@ -39,6 +40,8 @@ class SynthEngine(
     private val amp = AmpFilter(sampleRate)
     private val slot = IntArray(CommandQueue.SLOT_SIZE)
     private var masterGain = DEFAULT_MASTER_GAIN
+    private var brightness = ToneParams.DEFAULT.brightness
+    private var decay = ToneParams.DEFAULT.decay
 
     // 줄마다 "지금 짚은 프렛"과 "벤딩량". 실제 음높이는 항상 이 둘에서 계산한다.
     private val fretOf = IntArray(tuning.stringCount)
@@ -73,7 +76,7 @@ class SynthEngine(
             CommandCodec.TYPE_SLIDE ->
                 if (fretboard.contains(a, b)) {
                     fretOf[a] = b
-                    voices.setPitch(a, pitchOf(a))
+                    voices.slideTo(a, pitchOf(a))
                 }
             CommandCodec.TYPE_BEND ->
                 if (fretboard.contains(a, 0)) {
@@ -86,7 +89,25 @@ class SynthEngine(
                 voices.silenceAll()
                 java.util.Arrays.fill(bendCentsOf, 0f)
             }
-            CommandCodec.TYPE_SET_MASTER_GAIN -> masterGain = Float.fromBits(slot[3]).coerceIn(0f, 1f)
+            CommandCodec.TYPE_NOTE_OFF -> voices.noteOff(a)
+            CommandCodec.TYPE_SET_MASTER_GAIN -> {
+                val value = Float.fromBits(slot[3])
+                if (!value.isNaN()) masterGain = value.coerceIn(0f, 1f)
+            }
+            CommandCodec.TYPE_SET_BRIGHTNESS -> {
+                val value = Float.fromBits(slot[3])
+                if (!value.isNaN()) {
+                    brightness = value.coerceIn(0f, 1f)
+                    voices.setTone(brightness, decay)
+                }
+            }
+            CommandCodec.TYPE_SET_DECAY -> {
+                val value = Float.fromBits(slot[3])
+                if (!value.isNaN()) {
+                    decay = value.coerceIn(0f, 1f)
+                    voices.setTone(brightness, decay)
+                }
+            }
         }
     }
 

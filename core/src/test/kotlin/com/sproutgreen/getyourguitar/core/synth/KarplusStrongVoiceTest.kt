@@ -270,4 +270,125 @@ class KarplusStrongVoiceTest {
         for (x in out) sum += x
         assertTrue(Math.abs(sum / out.size) < 1e-3, "mean ${sum / out.size}")
     }
+
+    // ---- noteOff: 누르고 있는 동안만 소리 (요청 2026-09-21) ----
+
+    @Test
+    fun `noteOff mutes within 60 ms without a click and then sleeps`() {
+        val v = voice()
+        v.noteOn(Pitch.hz(28), 0.8f) // E1: 주기가 24 ms라 루프 감쇠로는 이렇게 빨리 못 끈다
+        val playing = SignalAnalysis.render(v, sr / 5)
+        val steadyStep = SignalAnalysis.maxStep(playing, sr / 10, sr / 5)
+        val level = SignalAnalysis.rms(playing, sr / 10, sr / 5)
+
+        v.noteOff()
+        val tail = SignalAnalysis.render(v, sr / 5)
+        val after60ms = SignalAnalysis.rms(tail, sr * 60 / 1000, sr * 80 / 1000)
+        assertTrue(after60ms < level * 0.01f, "still ${20 * kotlin.math.log10(after60ms / level)} dB after 60 ms")
+        assertTrue(SignalAnalysis.maxStep(tail) < steadyStep * 1.5f, "noteOff clicked")
+        assertTrue(abs(tail[0] - playing.last()) < steadyStep * 1.5f, "click at noteOff")
+        assertFalse(v.isActive)
+        assertEquals(0f, SignalAnalysis.peak(tail, sr / 10, tail.size))
+    }
+
+    @Test
+    fun `noteOff is gentler than silence`() {
+        val v = voice().also { it.noteOn(110f, 0.8f) }
+        SignalAnalysis.render(v, sr / 10)
+        v.noteOff()
+        val tail = SignalAnalysis.render(v, sr / 10)
+        // silence()는 2 ms 만에 끊는다. noteOff는 10 ms 뒤에도 아직 들려야 한다(뮤트하는 느낌).
+        assertTrue(SignalAnalysis.peak(tail, sr * 10 / 1000, sr * 15 / 1000) > 0f)
+    }
+
+    @Test
+    fun `a pluck right after noteOff sounds at full level`() {
+        val v = voice()
+        v.noteOn(110f, 0.8f)
+        val first = SignalAnalysis.render(v, sr / 10)
+        v.noteOff()
+        SignalAnalysis.render(v, sr / 100) // 릴리스 도중에
+        v.noteOn(110f, 0.8f)
+        val second = SignalAnalysis.render(v, sr / 5)
+        assertTrue(v.isActive)
+        val a = SignalAnalysis.rms(first, 0, sr / 10)
+        val b = SignalAnalysis.rms(second, sr / 100, sr / 100 + sr / 10)
+        assertTrue(b > a * 0.7f, "re-pluck during release too quiet: $b vs $a")
+    }
+
+    @Test
+    fun `noteOff on a silent voice does nothing`() {
+        val v = voice()
+        v.noteOff()
+        assertFalse(v.isActive)
+        assertEquals(0f, SignalAnalysis.peak(SignalAnalysis.render(v, 1000)))
+    }
+
+    // ---- 슬라이드 에너지 딥 (스펙 5.2). 벤딩(setPitch)에는 걸지 않는다 ----
+
+    @Test
+    fun `slideTo dips the level briefly and returns exactly to the undipped signal`() {
+        fun run(slide: Boolean): FloatArray {
+            val v = KarplusStrongVoice(sr, seed = 7)
+            v.noteOn(Pitch.hz(38), 0.8f)
+            SignalAnalysis.render(v, sr / 4)
+            if (slide) v.slideTo(Pitch.hz(40)) else v.setPitch(Pitch.hz(40))
+            return SignalAnalysis.render(v, sr / 10)
+        }
+        val bent = run(slide = false)
+        val slid = run(slide = true)
+        val glide = sr * 8 / 1000
+        // 파형의 에너지가 주기의 한 지점에 몰려 있어 RMS로는 딥이 안 잡힌다 → 샘플별 비율로 본다.
+        fun gainAt(i: Int): Float? = if (abs(bent[i]) > 1e-3f) slid[i] / bent[i] else null
+        val middle = (glide / 2 - 20..glide / 2 + 20).mapNotNull { gainAt(it) }
+        val start = (0..10).mapNotNull { gainAt(it) }
+        assertTrue(middle.isNotEmpty() && start.isNotEmpty(), "test signal too quiet to measure")
+        for (gain in middle) assertEquals(0.85f, gain, 0.02f, "deepest point of the dip")
+        for (gain in start) assertEquals(1f, gain, 0.02f, "dip must start from full level")
+        for (i in glide + 1 until slid.size) assertEquals(bent[i], slid[i], 1e-6f, "sample $i should be undipped")
+        assertTrue(SignalAnalysis.maxStep(slid) <= SignalAnalysis.maxStep(bent) * 1.05f, "dip clicked")
+    }
+
+    // ---- 음색을 Float 두 개로 바꾸기 (오디오 스레드에서 객체를 만들지 않기 위해) ----
+
+    private fun hiss(x: FloatArray): Float {
+        val diff = FloatArray(x.size - 1) { x[it + 1] - x[it] }
+        return SignalAnalysis.rms(diff) / SignalAnalysis.rms(x)
+    }
+
+    @Test
+    fun `brightness changes how bright a note is`() {
+        fun render(brightness: Float): FloatArray {
+            val v = voice()
+            v.setTone(brightness, 0.7f)
+            v.noteOn(Pitch.hz(40), 0.8f)
+            return SignalAnalysis.render(v, sr / 2)
+        }
+        assertTrue(hiss(render(1f)) > hiss(render(0f)) * 1.5f, "bright ${hiss(render(1f))} dark ${hiss(render(0f))}")
+    }
+
+    @Test
+    fun `decay changes how long a note lasts`() {
+        fun levelAfterOneSecond(decay: Float): Float {
+            val v = voice()
+            v.setTone(0.6f, decay)
+            v.noteOn(Pitch.hz(45), 0.8f)
+            val out = SignalAnalysis.render(v, sr * 3 / 2)
+            return SignalAnalysis.rms(out, sr, sr + sr / 10)
+        }
+        val long = levelAfterOneSecond(1f)
+        val short = levelAfterOneSecond(0f)
+        assertTrue(long > short * 3f, "long=$long short=$short")
+    }
+
+    @Test
+    fun `changing the tone while a note rings does not click`() {
+        val v = voice().also { it.noteOn(Pitch.hz(40), 0.8f) }
+        val before = SignalAnalysis.render(v, sr / 4)
+        val steadyStep = SignalAnalysis.maxStep(before, sr / 8, sr / 4)
+        v.setTone(1f, 0.2f)
+        val after = SignalAnalysis.render(v, sr / 10)
+        assertTrue(abs(after[0] - before.last()) < steadyStep * 1.5f)
+        assertTrue(SignalAnalysis.maxStep(after, 1, sr / 100) < steadyStep * 2f)
+    }
 }

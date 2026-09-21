@@ -27,6 +27,9 @@ class CommandQueueTest {
             Command.AllNotesOff,
             Command.SetMasterGain(0.35f),
             Command.Bend(2, 137.5f),
+            Command.NoteOff(3),
+            Command.SetBrightness(0.25f),
+            Command.SetDecay(0.9f),
         )
         for (c in sent) assertTrue(q.offer(c))
         val received = generateSequence { q.pollCommand() }.toList()

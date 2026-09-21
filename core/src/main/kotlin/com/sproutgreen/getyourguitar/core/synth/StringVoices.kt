@@ -29,12 +29,25 @@ class StringVoices(
         voices[string].setPitch(hz)
     }
 
+    fun slideTo(string: Int, hz: Float) {
+        if (string < 0 || string >= count) return
+        voices[string].slideTo(hz)
+    }
+
+    fun noteOff(string: Int) {
+        if (string < 0 || string >= count) return
+        voices[string].noteOff()
+    }
+
     fun silenceAll() {
         for (i in 0 until count) voices[i].silence()
     }
 
-    fun setTone(tone: ToneParams) {
-        for (i in 0 until count) voices[i].setTone(tone)
+    fun setTone(tone: ToneParams) = setTone(tone.brightness, tone.decay)
+
+    /** 객체를 만들지 않는 경로(오디오 스레드용). */
+    fun setTone(brightness: Float, decay: Float) {
+        for (i in 0 until count) voices[i].setTone(brightness, decay)
     }
 
     /** 활성 보이스를 out에 더한다. */

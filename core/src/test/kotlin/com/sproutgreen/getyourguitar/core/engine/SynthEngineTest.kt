@@ -204,4 +204,71 @@ class SynthEngineTest {
         for (piece in pieces) { System.arraycopy(piece, 0, sweep, at, piece.size); at += piece.size }
         assertTrue(SignalAnalysis.maxStep(sweep) < steadyStep * 2f, "bend sweep clicked")
     }
+
+    // ---- NoteOff ----
+
+    @Test
+    fun `NoteOff stops only its own string`() {
+        val e = engine()
+        e.send(Command.NoteOn(0, 3))
+        e.send(Command.NoteOn(2, 5))
+        render(e, sr / 10)
+        e.send(Command.NoteOff(0))
+        render(e, sr / 10)
+        val rest = render(e, sr / 2)
+        assertTrue(SignalAnalysis.rms(rest) > 0.01f, "the other string must keep ringing")
+        assertHz(Pitch.hz(38 + 5), SignalAnalysis.estimateHz(rest, sr, Pitch.hz(43), from = 0, length = 16_000))
+
+        e.send(Command.NoteOff(2))
+        render(e, sr / 10)
+        assertEquals(0f, SignalAnalysis.peak(render(e, 4800)))
+    }
+
+    @Test
+    fun `NoteOff for a nonexistent or silent string is ignored`() {
+        val e = engine()
+        e.send(Command.NoteOff(1))
+        e.send(Command.NoteOff(7))
+        e.send(Command.NoteOff(-2))
+        assertEquals(0f, SignalAnalysis.peak(render(e, 4800)))
+    }
+
+    @Test
+    fun `a bend left on a released string does not leak into the next pluck`() {
+        assertPitch(Pitch.hz(38), Command.NoteOn(1, 5), Command.Bend(1, 200f), Command.NoteOff(1), Command.NoteOn(1, 5))
+    }
+
+    // ---- 음색 커맨드 ----
+
+    private fun hiss(x: FloatArray): Float {
+        val diff = FloatArray(x.size - 1) { x[it + 1] - x[it] }
+        return SignalAnalysis.rms(diff) / SignalAnalysis.rms(x)
+    }
+
+    @Test
+    fun `SetBrightness and SetDecay reach the voices`() {
+        fun play(vararg setup: Command): FloatArray {
+            val e = engine()
+            for (c in setup) e.send(c)
+            e.send(Command.NoteOn(1, 7))
+            return render(e, sr * 3 / 2)
+        }
+        assertTrue(hiss(play(Command.SetBrightness(1f))) > hiss(play(Command.SetBrightness(0f))) * 1.3f)
+        val long = SignalAnalysis.rms(play(Command.SetDecay(1f)), sr, sr + sr / 10)
+        val short = SignalAnalysis.rms(play(Command.SetDecay(0f)), sr, sr + sr / 10)
+        // A줄 7프렛(82 Hz)은 1초에 루프를 82번만 돈다: 0.9995^82 / 0.990^82 ≈ 2.2배가 물리적 한계.
+        assertTrue(long > short * 2f, "long=$long short=$short")
+    }
+
+    @Test
+    fun `tone commands clamp out of range values instead of breaking the sound`() {
+        val e = engine()
+        e.send(Command.SetBrightness(40f))
+        e.send(Command.SetDecay(-3f))
+        e.send(Command.SetBrightness(Float.NaN))
+        e.send(Command.NoteOn(0, 0))
+        val out = render(e, sr / 4)
+        assertTrue(SignalAnalysis.peak(out) > 0.05f && SignalAnalysis.peak(out) < 1f)
+        for (x in out) assertTrue(!x.isNaN())
+    }
 }

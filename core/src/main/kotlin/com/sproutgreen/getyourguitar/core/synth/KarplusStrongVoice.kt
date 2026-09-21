@@ -40,7 +40,8 @@ class KarplusStrongVoice(
     private var lp = 0f
     private var a = 0f
     private var g = 0f
-    private var tone: ToneParams = tone
+    private var brightness = tone.brightness
+    private var decay = tone.decay
     private var noteHz = 0f
 
     /** 픽업 위치(울리는 현 길이에 대한 비율). 피킹할 때만 정한다 — 울리는 중에 바꾸면 탭이 튀어 클릭이 난다. */
@@ -58,6 +59,11 @@ class KarplusStrongVoice(
     private var env = 0f
     private var fade = FADE_NONE
     private val fadeStep = 1f / (sampleRate * FADE_MS / 1000f)
+    private val releaseStep = 1f / (sampleRate * RELEASE_MS / 1000f)
+    private var fadeOutStep = fadeStep
+
+    /** 슬라이드 에너지 딥의 남은 샘플 수. 0이면 딥 없음. */
+    private var dipLeft = 0
     private val glideSamples = (sampleRate * GLIDE_MS / 1000f).toInt().coerceAtLeast(1)
 
     private var pendingNote = false
@@ -69,20 +75,24 @@ class KarplusStrongVoice(
     private var rng = if (seed == 0) 1 else seed
 
     init {
-        g = tone.feedback()
+        g = ToneParams.feedback(decay)
     }
 
     override val isActive: Boolean get() = active
 
     /** 컷오프·피드백을 바꾼다. 울리는 중이면 필터는 바로 바뀌고, 음높이 보정은 다음 noteOn/setPitch부터 반영된다. */
-    fun setTone(tone: ToneParams) {
-        this.tone = tone
-        g = tone.feedback()
+    fun setTone(tone: ToneParams) = setTone(tone.brightness, tone.decay)
+
+    /** 객체를 만들지 않는 경로. 엔진이 오디오 스레드에서 부른다. */
+    fun setTone(brightness: Float, decay: Float) {
+        this.brightness = brightness.coerceIn(0f, 1f)
+        this.decay = decay.coerceIn(0f, 1f)
+        g = ToneParams.feedback(this.decay)
         if (active) a = coefficientFor(noteHz)
     }
 
     private fun coefficientFor(hz: Float): Float =
-        (1.0 - exp(-2.0 * Math.PI * tone.cutoffHz(hz) / sampleRate)).toFloat().coerceIn(0.001f, 1f)
+        (1.0 - exp(-2.0 * Math.PI * ToneParams.cutoffHz(brightness, hz) / sampleRate)).toFloat().coerceIn(0.001f, 1f)
 
     override fun noteOn(hz: Float, velocity: Float) {
         if (active && env > 0f) {
@@ -91,6 +101,7 @@ class KarplusStrongVoice(
             pendingHz = hz
             pendingVelocity = velocity
             fade = FADE_OUT
+            fadeOutStep = fadeStep // 릴리스 중이었더라도 새 피킹은 빨리 받아야 한다
         } else {
             excite(hz, velocity)
             env = 1f
@@ -99,22 +110,40 @@ class KarplusStrongVoice(
     }
 
     override fun setPitch(hz: Float) {
-        if (!active) return
+        startGlide(hz)
+    }
+
+    override fun slideTo(hz: Float) {
+        if (startGlide(hz)) dipLeft = glideSamples
+    }
+
+    /** 글라이드를 시작했으면 true. 비활성이거나 꺼지는 중이면 시작하지 않는다. */
+    private fun startGlide(hz: Float): Boolean {
+        if (!active) return false
         if (fade == FADE_OUT) {
             if (pendingNote) pendingHz = hz
-            return
+            return false
         }
         noteHz = hz
         a = coefficientFor(hz)
         delayTarget = delayFor(hz)
         glideLeft = glideSamples
         delayStep = (delayTarget - delayLen) / glideSamples
+        return true
+    }
+
+    override fun noteOff() {
+        if (!active || fade == FADE_OUT) return
+        pendingNote = false
+        fade = FADE_OUT
+        fadeOutStep = releaseStep
     }
 
     override fun silence() {
         if (!active) return
         pendingNote = false
         fade = FADE_OUT
+        fadeOutStep = fadeStep
     }
 
     override fun render(out: FloatArray, offset: Int, frames: Int) {
@@ -122,7 +151,7 @@ class KarplusStrongVoice(
         var peak = 0f
         for (i in 0 until frames) {
             if (fade == FADE_OUT) {
-                env -= fadeStep
+                env -= fadeOutStep
                 if (env <= 0f) {
                     env = 0f
                     if (pendingNote) {
@@ -175,7 +204,16 @@ class KarplusStrongVoice(
 
             val level = abs(lp)
             if (level > peak) peak = level
-            out[offset + i] += (current - tapped) * (noteGain * env)
+
+            var gain = noteGain * env
+            if (dipLeft > 0) {
+                dipLeft--
+                // 0 → 1 → 0 삼각형: 글라이드 한가운데서 가장 깊고, 끝나면 정확히 1로 돌아온다.
+                val progress = 1f - dipLeft.toFloat() / glideSamples
+                val triangle = 1f - abs(2f * progress - 1f)
+                gain *= 1f - SLIDE_DIP * triangle
+            }
+            out[offset + i] += (current - tapped) * gain
         }
 
         if (peak < SILENCE_THRESHOLD) {
@@ -268,6 +306,7 @@ class KarplusStrongVoice(
         fade = FADE_NONE
         pendingNote = false
         glideLeft = 0
+        dipLeft = 0
         lp = 0f
         java.util.Arrays.fill(delay, 0f)
     }
@@ -298,6 +337,12 @@ class KarplusStrongVoice(
 
         const val MIN_HZ = 25
         const val FADE_MS = 2f
+
+        /** noteOff의 길이. 출력만 내리는 선형 페이드라 음높이와 무관하다(E1은 주기가 24 ms라 루프 감쇠로는 못 맞춘다). */
+        const val RELEASE_MS = 45f
+
+        /** 슬라이드 중 가장 깊은 지점의 음량 감소(스펙 5.2의 0.85). */
+        const val SLIDE_DIP = 0.15f
         const val GLIDE_MS = 8f
         const val SILENCE_THRESHOLD = 1e-4f
         const val QUIET_CHUNKS_TO_SLEEP = 4
