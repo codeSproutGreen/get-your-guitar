@@ -2,7 +2,6 @@ package com.sproutgreen.getyourguitar.ui.fretboard
 
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.changedToDown
-import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import kotlinx.coroutines.CoroutineScope
@@ -21,6 +20,7 @@ fun Modifier.fretboardGestures(
 ): Modifier = pointerInput(state, tracker) {
     val scrollPointers = HashSet<Long>()
     val mutePointers = HashSet<Long>()
+    val pressedNow = HashSet<Long>() // 이벤트마다 비우고 다시 채운다
     try {
         awaitPointerEventScope {
             while (true) {
@@ -51,7 +51,9 @@ fun Modifier.fretboardGestures(
                             }
                         }
 
-                        change.changedToUp() -> {
+                        // changedToUp()이 아니라 "눌려 있지 않다"로 본다. 시스템이 제스처를 취소하면 Compose는 이미 소비된
+                        // up 이벤트를 합성해 보내는데 changedToUp()은 소비된 변화를 무시해서, 취소된 손가락이 영영 남는다.
+                        !change.pressed -> {
                             if (scrollPointers.remove(id)) {
                                 if (scrollPointers.isEmpty()) state.settle(scope, geometry)
                             } else if (mutePointers.remove(id)) {
@@ -65,7 +67,7 @@ fun Modifier.fretboardGestures(
                             }
                         }
 
-                        change.pressed -> {
+                        else -> {
                             if (id in scrollPointers) {
                                 state.dragBy(-change.positionChange().x / geometry.cellWidth, geometry)
                             } else if (id in mutePointers) {
@@ -81,6 +83,16 @@ fun Modifier.fretboardGestures(
                         }
                     }
                     change.consume()
+                }
+
+                // 안전망: 이벤트에 더 이상 없는 포인터는 어떤 경로로든 사라진 것이다.
+                pressedNow.clear()
+                for (change in event.changes) if (change.pressed) pressedNow.add(change.id.value)
+                tracker.retainOnly(pressedNow)
+                scrollPointers.retainAll(pressedNow)
+                if (mutePointers.retainAll(pressedNow) && mutePointers.isEmpty()) {
+                    tracker.setMute(false)
+                    state.mutePressed = false
                 }
             }
         }

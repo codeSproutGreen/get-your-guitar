@@ -13,9 +13,12 @@ class FretboardTouchTrackerTest {
     private val sent = mutableListOf<Command>()
     private val sounded = mutableListOf<Pair<Int, Int>>()
     private val bendVisuals = mutableListOf<Pair<Int, Float>>()
-    /** 가짜 시계: 추적기가 시각을 물을 때마다 [stepMs]씩 흐른다. 기본 100 ms = 느긋한 손놀림. */
+    /**
+     * 가짜 시계: 추적기가 시각을 물을 때마다 [stepMs]씩 흐른다(down에서 한 번, 역할이 정해지기 전의 move마다 한 번).
+     * 기본 300 ms = 짚고 나서 움직이는 손(판정 시간 250 ms보다 길다). 레이크를 흉내 낼 때는 10~50 ms로 줄인다.
+     */
     private var nowMs = 0L
-    private var stepMs = 100L
+    private var stepMs = 300L
     private val tracker = FretboardTouchTracker(
         send = { sent += it },
         onSounded = { string, fret -> sounded += string to fret },
@@ -49,6 +52,7 @@ class FretboardTouchTrackerTest {
 
     @Test
     fun `move onto another string plucks it and leaves the old one ringing`() {
+        stepMs = 10 // 짚자마자 훑는다 = 레이크
         tracker.down(1L, 3, 4, y(3))
         tracker.move(1L, 2, 4, y(2))
         tracker.move(1L, 1, 5, y(1))
@@ -241,17 +245,22 @@ class FretboardTouchTrackerTest {
         assertEquals(200f, bends().last().cents, 0.01f)
     }
 
+    /** 짚은 손가락의 세로 이동은 전부 벤딩이다. 밴드 가장자리를 짚어서 곧바로 옆 줄 영역에 들어가도 레이크가 아니다. */
     @Test
-    fun `crossing before any bend has started is still a rake`() {
-        tracker.down(1L, 2, 5, y(2, 0.45f))   // 밴드 아래쪽 끝을 짚고
-        tracker.move(1L, 1, 5, y(1, -0.47f))  // 0.08밴드만 움직여 A줄 영역으로: 데드존 안이라 벤딩 시작 전
-        assertEquals(listOf<Command>(Command.NoteOn(2, 5), Command.NoteOn(1, 5)), sent)
+    fun `a settled finger near the band edge bends instead of raking`() {
+        tracker.down(1L, 2, 5, y(2, 0.45f))   // 밴드 아래쪽 끝을 짚고 멈췄다가
+        tracker.move(1L, 1, 5, y(1, -0.47f))  // 0.08밴드 움직여 A줄 영역으로
+        tracker.move(1L, 1, 5, y(1, -0.10f))  // 더 민다: 기준점에서 0.45밴드
+        assertEquals(listOf<Command>(Command.NoteOn(2, 5)), sent.filter { it !is Command.Bend })
+        assertTrue(bends().isNotEmpty() && bends().all { it.string == 2 })
     }
 
     @Test
     fun `a string entered by rake is never bent`() {
+        stepMs = 10
         tracker.down(1L, 3, 5, y(3))
         tracker.move(1L, 2, 5, y(2, -0.45f))
+        stepMs = 300 // 그 뒤로는 아무리 천천히 움직여도 레이크 손가락이다
         sent.clear()
         tracker.move(1L, 2, 5, y(2, 0.0f))
         tracker.move(1L, 2, 5, y(2, 0.45f))
@@ -262,6 +271,7 @@ class FretboardTouchTrackerTest {
 
     @Test
     fun `a fast rake sends only plucks`() {
+        stepMs = 10
         tracker.down(1L, 3, 5, y(3))
         tracker.move(1L, 2, 5, y(2))
         tracker.move(1L, 1, 5, y(1))
@@ -295,14 +305,66 @@ class FretboardTouchTrackerTest {
     }
 
     @Test
-    fun `bend visual clears when the finger rakes away before bending`() {
-        tracker.down(1L, 2, 5, y(2, 0.45f))
-        tracker.move(1L, 2, 5, y(2, 0.48f))   // 걸렸지만 데드존 안: 줄이 살짝 따라온다
-        tracker.move(1L, 1, 5, y(1, -0.47f))  // 레이크
-        assertEquals(2 to 0f, bendVisuals.last())
+    fun `a raking finger never draws a bent string`() {
+        stepMs = 40
+        tracker.down(1L, 3, 5, y(3, -0.3f))
+        for (i in 1..12) tracker.move(1L, if (i < 5) 3 else if (i < 9) 2 else 1, 5, y(3, -0.3f + i * 0.2f))
+        assertTrue(bendVisuals.isEmpty(), "$bendVisuals")
     }
 
-    // ---- 벤딩은 터치 후 잠깐 지나야 걸린다 (레이크의 첫 줄이 휘지 않게) ----
+    // ---- 레이크냐 벤딩이냐: "짚자마자 움직였나, 짚은 뒤에 움직였나" ----
+    // 클라이언트(베이스 연주자)의 정의. 터치 후 SETTLE_MS(250 ms) 안에 세로로 RAKE_TRAVEL_BANDS(0.25밴드 ≈ 2.5 mm)
+    // 이상 움직이면 레이크 손가락, 그동안 제자리에 있었으면 짚은 손가락이다. 역할은 손을 뗄 때까지 안 바뀐다.
+
+    /** 실기기 재현(2026-09-21): 한 줄당 200 ms·375 ms로 훑으면 첫 줄만 튕기고 온음까지 벤딩됐다. */
+    @Test
+    fun `a rake at human speed plucks every string and bends nothing`() {
+        for (msPerString in listOf(100, 200, 375, 500)) {
+            sent.clear(); bendVisuals.clear(); nowMs = 0
+            stepMs = 25 // 터치 이벤트 간격
+            val perEvent = 25f / msPerString // 이벤트 하나에 움직이는 밴드 수
+            var pos = 0.5f                   // G줄 한가운데에서 시작
+            tracker.down(1L, 3, 5, pos)
+            while (pos < 3.5f) {
+                pos += perEvent
+                val string = 3 - pos.toInt().coerceIn(0, 3)
+                tracker.move(1L, string, 5, pos)
+            }
+            tracker.up(1L)
+            assertEquals(
+                listOf(3, 2, 1, 0),
+                sent.filterIsInstance<Command.NoteOn>().map { it.string },
+                "$msPerString ms per string",
+            )
+            assertTrue(bends().isEmpty(), "$msPerString ms per string bent: ${bends()}")
+            assertTrue(bendVisuals.isEmpty(), "$msPerString ms per string drew a bend")
+        }
+    }
+
+    @Test
+    fun `the finger settling as it lands does not make it a rake`() {
+        stepMs = 20
+        tracker.down(1L, 1, 5, y(1))
+        tracker.move(1L, 1, 5, y(1, 0.08f))  // 살이 눌리며 터치 중심이 1~2 mm 움직인다
+        tracker.move(1L, 1, 5, y(1, 0.15f))
+        stepMs = 400
+        tracker.move(1L, 1, 5, y(1, 0.16f))  // 250 ms가 지났고 그동안 0.25밴드를 못 넘었다 → 짚은 손가락
+        tracker.move(1L, 1, 5, y(1, 0.60f))
+        assertTrue(bends().isNotEmpty(), "must still be able to bend")
+        assertEquals(listOf<Command>(Command.NoteOn(1, 5)), sent.filter { it !is Command.Bend })
+    }
+
+    @Test
+    fun `a slow start that crosses the travel threshold just inside the settle time is a rake`() {
+        stepMs = 60
+        tracker.down(1L, 3, 5, y(3, -0.4f))  // t = 60
+        tracker.move(1L, 3, 5, y(3, -0.32f)) // t = 120
+        tracker.move(1L, 3, 5, y(3, -0.24f)) // t = 180
+        tracker.move(1L, 3, 5, y(3, -0.16f)) // t = 240: 0.24밴드 — 아직 문턱 아래
+        tracker.move(1L, 3, 5, y(3, -0.08f)) // t = 300: 터치 후 240 ms, 0.32밴드 이동 → 레이크
+        tracker.move(1L, 2, 5, y(2, -0.4f))
+        assertEquals(listOf<Command>(Command.NoteOn(3, 5), Command.NoteOn(2, 5)), sent)
+    }
 
     @Test
     fun `a fast vertical pass through the first band does not bend it`() {
@@ -317,15 +379,15 @@ class FretboardTouchTrackerTest {
     }
 
     @Test
-    fun `bend arms 80 ms after the touch and measures from where the finger was then`() {
-        stepMs = 30
-        tracker.down(1L, 1, 5, y(1))          // t = 30
-        tracker.move(1L, 1, 5, y(1, 0.10f))   // t = 60: 아직 안 걸림
-        tracker.move(1L, 1, 5, y(1, 0.20f))   // t = 90: 아직 안 걸림 (60 ms 경과)
-        tracker.move(1L, 1, 5, y(1, 0.30f))   // t = 120: 걸림. 기준점 = 직전 위치 0.20 → 이동 0.10 = 데드존
-        assertTrue(bends().isEmpty(), "arming must not jump the pitch: ${bends()}")
-        tracker.move(1L, 1, 5, y(1, 0.45f))   // 기준점에서 0.25 → (0.25 − 0.1) / 0.4 × 200 = 75
-        assertEquals(75f, bends().last().cents, 0.5f)
+    fun `bend measures from where the finger was when it settled`() {
+        stepMs = 100
+        tracker.down(1L, 1, 5, y(1))          // t = 100
+        tracker.move(1L, 1, 5, y(1, 0.05f))   // t = 200: 판정 시간 안, 거의 안 움직임
+        tracker.move(1L, 1, 5, y(1, 0.10f))   // t = 300: 아직 200 ms 경과
+        tracker.move(1L, 1, 5, y(1, 0.12f))   // t = 400: 확정. 기준점 = 직전 위치 0.10 → 이동 0.02 = 데드존
+        assertTrue(bends().isEmpty(), "settling must not jump the pitch: ${bends()}")
+        tracker.move(1L, 1, 5, y(1, 0.45f))   // 기준점에서 0.35 → (0.35 − 0.1) / 0.4 × 200 = 125
+        assertEquals(125f, bends().last().cents, 0.5f)
     }
 
     @Test
@@ -340,7 +402,7 @@ class FretboardTouchTrackerTest {
     fun `custom bend range scales the cents`() {
         val wide = mutableListOf<Command>()
         var t0 = 0L
-        val t = FretboardTouchTracker(send = { wide += it }, maxBendCents = 400f, clockMs = { t0 += 100; t0 })
+        val t = FretboardTouchTracker(send = { wide += it }, maxBendCents = 400f, clockMs = { t0 += 300; t0 })
         t.down(1L, 0, 3, y(0))
         t.move(1L, 0, 3, y(0, 0.5f))
         assertEquals(Command.Bend(0, 400f), wide.last())

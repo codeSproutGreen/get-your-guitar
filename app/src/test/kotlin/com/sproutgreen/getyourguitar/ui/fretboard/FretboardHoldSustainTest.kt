@@ -21,7 +21,7 @@ class FretboardHoldSustainTest {
         onSounded = { string, fret -> sounded += string to fret },
         onBend = { string, displacement -> bendVisuals += string to displacement },
         onReleased = { released += it },
-        clockMs = { nowMs += 100; nowMs },
+        clockMs = { nowMs += 300; nowMs }, // 짚고 나서 움직이는 손(판정 시간 250 ms보다 길다)
     ).also { it.setMute(true) }
 
     private fun y(string: Int, offset: Float = 0f): Float = (3 - string) + 0.5f + offset

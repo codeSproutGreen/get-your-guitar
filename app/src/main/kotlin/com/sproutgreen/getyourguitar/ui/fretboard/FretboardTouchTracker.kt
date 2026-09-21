@@ -10,9 +10,9 @@ import kotlin.math.abs
  * |---|---|
  * | down | NoteOn |
  * | move, 같은 줄·다른 프렛 | Slide |
- * | move, 세로로 (벤딩이 걸린 뒤) | Bend — 기준점에서 벗어난 거리만큼 음이 올라간다(위·아래 같음) |
- * | move, 다른 줄 진입 (벤딩 시작 전) | 새 줄에 NoteOn(레이크). 이전 줄도 이 손가락이 계속 쥐고 있다 |
- * | move, 다른 줄 진입 (벤딩 시작 후) | 무시 — 손을 뗄 때까지 짚은 줄에 고정. 벤딩은 최대에서 유지 |
+ * | move, 세로로 (짚은 손가락) | Bend — 기준점에서 벗어난 거리만큼 음이 올라간다(위·아래 같음). 그 줄에 고정 |
+ * | move, 다른 줄 진입 (레이크 손가락) | 새 줄에 NoteOn. 이전 줄도 이 손가락이 계속 쥐고 있다 |
+ * | move, 다른 줄 진입 (짚은 손가락) | 무시 — 손을 뗄 때까지 짚은 줄에 고정. 벤딩은 최대에서 유지 |
  * | move, 같은 셀·데드존 안 | 무시 |
  * | up / cancel | 아래에 다른 손가락이 있으면 풀오프. 없으면: [muting]일 때 NoteOff, 아니면 벤딩만 풀고 자연 감쇠 |
  * | 뮤트 바 누름 ([setMute]) | 손가락이 떠난 채 울리던 줄을 전부 NoteOff. 아직 누르고 있는 음은 그대로 |
@@ -28,12 +28,19 @@ import kotlin.math.abs
  * - 소유자가 아닌 손가락을 떼면 아무 일도 없다.
  * - 레이크로 훑은 줄은 전부 그 손가락의 것이고, (뮤트 중이면) 떼면 한꺼번에 멈춘다. 지나가자마자 멈추면 화음을 쌓을 수 없다.
  *
- * **벤딩과 레이크는 "어디까지 밀었나"가 아니라 "어떻게 시작했나"로 갈린다.** 짚고 나서 밀면 벤딩,
- * 짚자마자 훑으면 레이크. 벤딩은 down으로 짚은 줄에서만, 터치 후 [BEND_ARM_MS]가 지나야 걸린다
- * (빠른 레이크가 첫 줄을 휘지 않게). 걸리는 순간의 기준점은 직전 이벤트의 손가락 위치다 — down 위치를 쓰면
- * 그동안 움직인 만큼 음이 튄다. 0이 아닌 Bend를 한 번이라도 보낸 포인터는 그 줄에 고정한다: 처음에는 밴드 경계를
- * 넘으면 레이크로 바꿨는데, 최대 벤딩 지점이 곧 경계라서 가장 세게 미는 순간 풀려 버렸다(실기기 피드백).
- * 대가: 한 줄에 80 ms 넘게 머무는 느린 레이크는 벤딩으로 해석된다.
+ * **레이크냐 벤딩이냐: "짚자마자 움직였나, 짚은 뒤에 움직였나".** 클라이언트(베이스 연주자)의 정의 그대로다.
+ * 두 주법은 같은 자리에서 시작해 같은 방향으로 움직이므로 공간으로는 구분할 수 없고, 차이는 시간 구조에 있다.
+ * - 터치 후 [SETTLE_MS] 안에 세로로 [RAKE_TRAVEL_BANDS] 이상 움직이면 **레이크 손가락**: 줄을 넘을 때마다 튕기고,
+ *   손을 뗄 때까지 벤딩하지 않는다. 확정된 뒤에는 아무리 천천히 훑어도 레이크다.
+ * - 그동안 제자리에 있었으면 **짚은 손가락**: 이후의 세로 이동은 전부 벤딩이고 그 줄에 고정된다. 옆 줄 영역으로
+ *   넘어가도 레이크가 되지 않고 벤딩이 최대에서 유지된다. 기준점은 확정 직전의 손가락 위치다 — down 위치를 쓰면
+ *   그동안 움직인 만큼 음이 튄다.
+ * - 역할은 한 번 정해지면 바뀌지 않는다.
+ *
+ * 여기까지 온 경위: ① 밴드 경계를 넘으면 레이크 → 최대 벤딩 지점이 곧 경계라 가장 세게 미는 순간 풀렸다.
+ * ② "터치 후 80 ms가 지나면 벤딩이 걸린다" → 그동안 손가락이 움직였는지를 안 봐서, 한 줄당 100 ms보다 느린
+ * (= 사람이 실제로 치는 속도의) 레이크가 전부 벤딩이 됐다. 검증에 쓴 레이크가 한 줄당 50 ms였던 탓에 놓쳤다.
+ * 남는 한계: 짚자마자 미는 벤딩은 레이크가 되고, 한 줄에 1초 넘게 걸리는 레이크는 벤딩이 된다.
  *
  * 세로 위치는 밴드 좌표([FretboardGeometry.bandCoordinate])로 받는다: 1.0 = 줄 밴드 하나의 높이.
  */
@@ -60,10 +67,15 @@ class FretboardTouchTracker(
     private class Pointer(var string: Int, bandY: Float, val downMs: Long) {
         /** 이 손가락이 쥐고 있는 줄 → 그 줄에서의 프렛. 레이크로 여러 줄을 쥘 수 있다. */
         val frets = LinkedHashMap<Int, Int>()
+        val downBandY = bandY
+
+        /** 아직 레이크 손가락으로 판정되지 않았다. false가 되면 끝까지 벤딩하지 않는다. */
         var bendable = true
+
+        /** 짚은 손가락으로 확정됐다. 이때부터 세로 이동은 벤딩이고 [locked]다. */
         var armed = false
 
-        /** 0이 아닌 Bend를 보낸 적이 있다 = 이 손가락은 벤딩 중. 손을 뗄 때까지 [string]에 고정. */
+        /** 짚은 손가락은 손을 뗄 때까지 [string]에 고정된다(옆 줄 영역으로 넘어가도 레이크가 아니다). */
         var locked = false
         var anchorBandY = bandY
         var lastBandY = bandY
@@ -107,6 +119,17 @@ class FretboardTouchTracker(
     fun move(pointerId: Long, string: Int, fret: Int, bandY: Float) {
         val p = pointers[pointerId] ?: return
 
+        // 역할이 아직 안 정해졌으면 먼저 정한다: 줄이 바뀌는 이벤트에서 확정될 수도 있기 때문이다.
+        if (p.bendable && !p.armed) {
+            if (clockMs() - p.downMs < SETTLE_MS) {
+                if (abs(bandY - p.downBandY) >= RAKE_TRAVEL_BANDS) p.bendable = false // 짚자마자 움직였다 → 레이크
+            } else {
+                p.armed = true // 제자리에 있었다 → 짚은 손가락
+                p.locked = true
+                p.anchorBandY = p.lastBandY
+            }
+        }
+
         if (string != p.string && !p.locked) {
             releaseBend(p, sendZero = true)
             p.bendable = false
@@ -125,10 +148,6 @@ class FretboardTouchTracker(
             }
         }
 
-        if (p.bendable && !p.armed && clockMs() - p.downMs >= BEND_ARM_MS) {
-            p.armed = true
-            p.anchorBandY = p.lastBandY
-        }
         p.lastBandY = bandY
 
         if (p.bendable && p.armed && owns) {
@@ -138,7 +157,6 @@ class FretboardTouchTracker(
             val reachedAnEnd = (cents == 0f || cents == maxBendCents) && cents != p.sentCents
             if (reachedAnEnd || abs(cents - p.sentCents) >= MIN_CENTS_STEP) {
                 p.sentCents = cents
-                if (cents > 0f) p.locked = true
                 send(Command.Bend(p.string, cents))
             }
         }
@@ -147,6 +165,17 @@ class FretboardTouchTracker(
     fun up(pointerId: Long) {
         val p = pointers.remove(pointerId) ?: return
         lift(p)
+    }
+
+    /**
+     * 지금 화면에 닿아 있는 포인터만 남기고 나머지는 뗀 것으로 처리한다. 제스처 계층이 이벤트마다 부른다.
+     * 시스템이 제스처를 취소하면 up 없이 포인터가 사라지는데, 그 손가락이 남아 있으면 다음 음을 뗄 때
+     * 가짜 풀오프가 나가고 뮤트 중에는 음이 멈추지 않는다.
+     */
+    fun retainOnly(activePointerIds: Set<Long>) {
+        if (pointers.isEmpty() || activePointerIds.containsAll(pointers.keys)) return
+        val vanished = pointers.keys.filter { it !in activePointerIds }
+        for (id in vanished) up(id)
     }
 
     fun cancelAll() {
@@ -222,7 +251,19 @@ class FretboardTouchTracker(
 
         const val MIN_CENTS_STEP = 1f
 
-        /** 터치 후 이 시간이 지나야 벤딩이 걸린다. 빠른 레이크가 첫 줄을 휘지 않게 하는 문턱. */
-        const val BEND_ARM_MS = 80L
+        // ---- 레이크/벤딩 판정. 클라이언트가 쳐 보고 조정할 값은 이 둘이다. ----
+
+        /**
+         * 터치 후 이 시간 안에 [RAKE_TRAVEL_BANDS] 이상 움직이면 레이크, 아니면 짚은 손가락(벤딩).
+         * 길수록 느린 레이크까지 잡지만, 그만큼 벤딩은 짚고 나서 이 시간을 기다린 뒤에 밀어야 한다.
+         * 250 ms면 한 줄당 1초보다 빠른 레이크가 모두 잡힌다.
+         */
+        const val SETTLE_MS = 250L
+
+        /**
+         * 밴드 높이의 1/4, S10e에서 약 2.5 mm. 손가락이 화면에 닿을 때 살이 눌리면서 터치 중심이 1~2 mm
+         * 저절로 움직이므로 그보다는 커야 한다. 작게 잡으면 가만히 짚은 손가락이 레이크로 잘못 잡혀 벤딩이 안 된다.
+         */
+        const val RAKE_TRAVEL_BANDS = 0.25f
     }
 }

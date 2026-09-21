@@ -16,7 +16,7 @@ class FretboardMuteTest {
     private val sent = mutableListOf<Command>()
     private val released = mutableListOf<Int>()
     private var nowMs = 0L
-    private var stepMs = 100L
+    private var stepMs = 300L // 짚고 나서 움직이는 손(판정 시간 250 ms보다 길다)
     private val tracker = FretboardTouchTracker(
         send = { sent += it },
         onReleased = { released += it },
@@ -149,5 +149,40 @@ class FretboardMuteTest {
         tracker.down(2L, 3, 1, y(3))
         tracker.cancelAll()
         assertEquals(listOf(3), noteOffs())
+    }
+
+    // ---- 사라진 손가락 (실기기에서 발견 2026-09-21) ----
+    // 시스템이 제스처를 취소하면(전화·알림, 다른 입력 장치의 개입) up 없이 포인터가 사라진다. 추적기에 그 손가락이
+    // 남아 있으면 다음 음을 뗄 때 가짜 풀오프가 나가고, 뮤트 중에는 음이 멈추지 않는다.
+
+    @Test
+    fun `a finger that vanished without an up is released by retainOnly`() {
+        tracker.setMute(true)
+        tracker.down(1L, 1, 9, y(1))
+        tracker.retainOnly(emptySet())
+        assertEquals(listOf(1), noteOffs())
+
+        sent.clear()
+        tracker.down(2L, 1, 5, y(1))
+        tracker.up(2L)
+        assertEquals(listOf(Command.NoteOn(1, 5), Command.NoteOff(1)), sent) // 9프렛으로의 가짜 풀오프가 없어야 한다
+    }
+
+    @Test
+    fun `retainOnly keeps the fingers that are still down`() {
+        tracker.setMute(true)
+        tracker.down(1L, 0, 3, y(0))
+        tracker.down(2L, 2, 5, y(2))
+        tracker.retainOnly(setOf(2L))
+        assertEquals(listOf(0), noteOffs())
+        tracker.move(2L, 2, 7, y(2))
+        assertEquals(Command.Slide(2, 7), sent.last())
+    }
+
+    @Test
+    fun `retainOnly with everything still down changes nothing`() {
+        tracker.down(1L, 0, 3, y(0))
+        tracker.retainOnly(setOf(1L, 99L))
+        assertEquals(1, sent.size)
     }
 }
