@@ -25,6 +25,7 @@ Android 앱 프로젝트 (베이스 지판 시뮬레이터). Kotlin 2.4 + Jetpac
 ## 빌드·테스트 명령
 
 - `./gradlew :core:test` — 순수 Kotlin 로직 테스트. push 전 필수.
+- `./gradlew :app:testDebugUnitTest` — `ui/fretboard`의 순수 Kotlin 부분(레이아웃·판정·제스처→커맨드). push 전 필수.
 - `./gradlew :app:assembleDebug :app:lintDebug` — 컴파일·린트. push 전 필수. 린트 에러 0 유지(경고는 허용).
 - 아키랩(Windows, Claude Code Bash)에서는 환경변수가 세션에 없을 수 있으니 앞에
   `export JAVA_HOME='E:\yjane.kim\tools\jdk-17.0.20.1+1' GRADLE_USER_HOME='E:\yjane.kim\tools\gradle-user-home'` 를 붙이고 `./gradlew.bat`을 쓴다.
@@ -33,3 +34,12 @@ Android 앱 프로젝트 (베이스 지판 시뮬레이터). Kotlin 2.4 + Jetpac
 - `:app`은 AGP built-in Kotlin을 쓴다 — `org.jetbrains.kotlin.android` 플러그인을 적용하지 않는다.
 - Claude Code Bash 도구의 heredoc은 연속된 백슬래시 2개를 1개로 깎는다. 백슬래시가 든 Kotlin/정규식 문자열은 Edit 도구로 쓴다.
 - 실기기 확인(SDS PC): `./gradlew.bat :app:installDebug` → `adb shell am start -W -n com.sproutgreen.getyourguitar/.MainActivity` → `adb exec-out screencap -p > <scratchpad>/x.png` 로 스크린샷을 읽어 확인한다. Git Bash에서 `adb shell`에 `/sdcard/...` 경로를 넘길 때는 `export MSYS_NO_PATHCONV=1` 필수.
+- 실기기 터치 주입: `adb shell input tap X Y` / `input swipe X1 Y1 X2 Y2 ms`, 결과는 `adb logcat -d -s gyg-cmd:D`(디버그 빌드에서 커맨드 로그)와 `gyg-audio:V`(트랙 시작 로그). 멀티터치는 주입 불가 — 사람이 확인한다. S10e 기준 좌표: 왼쪽 컷아웃 여백 116 px, 셀 폭 ≈180 px, 줄 중심 y = G 313 / D 508 / A 702 / E 896.
+- 오디오 경로 확인: `adb shell dumpsys media.audio_flinger` 에서 앱 pid의 트랙 Type이 `F`로 시작하면 FAST 트랙.
+
+## 코드 규칙
+
+- **오디오 스레드 규칙**: `SynthEngine.render`에서 닿는 모든 코드는 객체 할당·락·로그 금지. `(FloatArray, Int) -> Unit` 같은 함수 타입도 Int 박싱을 일으키므로 쓰지 않는다(`AudioRenderer` fun interface 사용). 테스트로 강제되지 않으니 리뷰에서 본다.
+- 엔진 큐는 단일 생산자다. `AudioController.send/start/stop`은 메인 스레드에서만 부른다.
+- UI 로직 중 Android가 필요 없는 부분(좌표 계산, 제스처 해석)은 순수 Kotlin 클래스로 빼서 JVM 단위 테스트를 붙인다 — 아키랩에서 검증할 수 있는 유일한 UI 부분이다.
+- 실기기 검증 결과는 `docs/verification-checklist.md`에 기록한다.

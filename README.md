@@ -17,6 +17,7 @@
 
 ```bash
 ./gradlew :core:test                          # 순수 Kotlin 로직 단위테스트 (모든 환경)
+./gradlew :app:testDebugUnitTest              # 지판 기하·제스처 로직 단위테스트 (모든 환경, Android 불필요)
 ./gradlew :app:assembleDebug :app:lintDebug   # 컴파일·린트 검증
 ./gradlew :app:installDebug                   # 실기기 설치 (검증 환경, USB 디버깅)
 ```

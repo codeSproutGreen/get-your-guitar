@@ -86,3 +86,18 @@ M0 계획과 달리 이 문서는 전체 코드를 싣지 않는다. 작업 단�
 - `docs/verification-checklist.md` (스펙 8.3): M1 항목 + M2·M3 항목 자리.
 - SDS PC에서 adb로 확인: 설치·실행, 스크린샷으로 지판 렌더, `input tap`/`swipe` 후 logcat의 커맨드 로그(디버그 빌드), `dumpsys media.audio_flinger`에서 FAST 트랙 여부.
 - README·CLAUDE.md 빌드 명령에 `:app:testDebugUnitTest` 추가, STATUS.md·메모리 갱신, push.
+
+## 실행 기록 (2026-09-21, SDS PC)
+
+전 Task 완료. 계획과 달랐던 점·측정값만 적는다.
+
+- **튜닝 실측**: E1·A1·G2·D3·G3·D4·G4 모두 +0.3~+0.8센트. 위상 지연 보정이 없었다면 G4가 약 −41센트.
+- **감쇠 실측**(기본 톤, 첫 0.5 s RMS 기준): E1 −8.0, A1 −8.1, G2 −7.2, D3 −10.1, G3 −14.7, D4 −35.8, G4 −56.1 dB/s. 저음이 추정(−1.3)보다 빠른 것은 배음이 먼저 타들어가기 때문이고 정상이다. 고음역은 예측대로 짧다 → 체크리스트 M1 #15.
+- 버스트 피크를 velocity로 정규화했지만 출력은 루프 LP를 한 번 더 거치므로 실제 피크는 0.42~0.59.
+- `AudioOutput.start`가 `(FloatArray, Int) -> Unit` 대신 `AudioRenderer`(fun interface)를 받는다 — 함수 타입은 콜백마다 Int를 박싱한다. `start`는 성공 여부를, `stop`은 오디오 스레드 종료 여부를 Boolean으로 돌려준다(스펙 6.1과의 차이).
+- `AudioController.stop()`은 오디오 스레드가 끝난 뒤 메인 스레드에서 20 ms를 렌더해 페이드아웃을 흘려보낸다. 안 그러면 다음 `start` 첫 버퍼에 이전 음의 꼬리가 섞인다.
+- 시스템 바를 숨겼다(스펙에 없음). 가로 모드에서 내비게이션 바가 연주 영역 오른쪽에 붙어 오터치가 나기 때문.
+- Canvas는 경계 밖을 자르지 않는다. 스크롤 중 화면 밖 셀의 포지션 마크가 컷아웃 여백에 그려져서 `clipToBounds()` 추가.
+- ViewModel 없이 컴포저블 상태로 구현(계획대로). M2에서 설정 저장소와 함께 도입.
+- S10e 결과: FAST 트랙 F3, float, 48 kHz, 버스트 192, 버퍼 384프레임, 언더런 0, AudioFlinger 보고 지연 16 ms.
+- adb로 확인 못 한 것: 멀티터치, 소리 자체, 체감 지연. `docs/verification-checklist.md` 참고.
