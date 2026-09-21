@@ -202,13 +202,45 @@ class FretboardTouchTrackerTest {
 
     // ---- 벤딩과 레이크의 경계 ----
 
+    /** 실기기 피드백(2026-09-21): 벤딩한 줄을 더 밀면 옆 줄 영역에 들어서며 벤딩이 풀렸다. */
     @Test
-    fun `crossing into another band releases the bend and plucks the new string`() {
+    fun `once a bend has started the finger stays on that string even over other bands`() {
         tracker.down(1L, 2, 5, y(2))
-        tracker.move(1L, 2, 5, y(2, 0.45f)) // D줄을 아래로 거의 끝까지
-        tracker.move(1L, 1, 5, y(1, -0.45f)) // 경계를 넘어 A줄 밴드
-        val tail = sent.takeLast(2)
-        assertEquals(listOf(Command.Bend(2, 0f), Command.NoteOn(1, 5)), tail)
+        tracker.move(1L, 2, 5, y(2, 0.45f))  // D줄을 아래로 거의 끝까지
+        tracker.move(1L, 1, 5, y(1, -0.45f)) // 경계를 넘어 A줄 영역
+        tracker.move(1L, 0, 5, y(0))         // E줄 영역까지
+        assertEquals(listOf<Command>(Command.NoteOn(2, 5)), sent.filter { it !is Command.Bend })
+        assertTrue(bends().all { it.string == 2 })
+        assertEquals(200f, bends().last().cents, 0.01f)
+        assertEquals(listOf(2 to 5), sounded)
+
+        tracker.up(1L)
+        assertEquals(Command.Bend(2, 0f), sent.last())
+    }
+
+    @Test
+    fun `a locked bend still slides along its own string`() {
+        tracker.down(1L, 2, 5, y(2))
+        tracker.move(1L, 2, 5, y(2, 0.45f))
+        tracker.move(1L, 1, 7, y(1, -0.3f)) // 옆 줄 영역에서 가로로도 이동
+        assertEquals(Command.Slide(2, 7), sent.last { it !is Command.Bend })
+    }
+
+    @Test
+    fun `a locked bend stays locked after easing back to zero`() {
+        tracker.down(1L, 2, 5, y(2))
+        tracker.move(1L, 2, 5, y(2, 0.4f))
+        tracker.move(1L, 2, 5, y(2, 0.0f))   // 벤딩을 풀었다가
+        tracker.move(1L, 3, 5, y(3, 0.3f))   // 반대쪽으로 크게 민다: 여전히 D줄 벤딩
+        assertEquals(listOf<Command>(Command.NoteOn(2, 5)), sent.filter { it !is Command.Bend })
+        assertEquals(200f, bends().last().cents, 0.01f)
+    }
+
+    @Test
+    fun `crossing before any bend has started is still a rake`() {
+        tracker.down(1L, 2, 5, y(2, 0.45f))   // 밴드 아래쪽 끝을 짚고
+        tracker.move(1L, 1, 5, y(1, -0.47f))  // 0.08밴드만 움직여 A줄 영역으로: 데드존 안이라 벤딩 시작 전
+        assertEquals(listOf<Command>(Command.NoteOn(2, 5), Command.NoteOn(1, 5)), sent)
     }
 
     @Test
@@ -245,19 +277,23 @@ class FretboardTouchTrackerTest {
     // ---- 시각 피드백 ----
 
     @Test
-    fun `bend visual follows the finger and clears on release`() {
+    fun `bend visual follows the finger past the band and clears on release`() {
         tracker.down(1L, 1, 5, y(1))
         tracker.move(1L, 1, 5, y(1, 0.05f)) // 데드존 안이어도 줄은 손가락을 따라간다
-        tracker.move(1L, 1, 5, y(1, -0.8f)) // 표시는 ±0.5 밴드로 제한
+        tracker.move(1L, 1, 5, y(1, -0.8f)) // 음은 0.5에서 최대지만 줄은 손가락을 끝까지 따라간다
+        tracker.move(1L, 1, 5, y(1, -9f))   // 터무니없는 값만 제한
         tracker.up(1L)
-        assertEquals(listOf(1 to 0.05f, 1 to -0.5f, 1 to 0f), bendVisuals.map { it.first to Math.round(it.second * 100) / 100f })
+        assertEquals(
+            listOf(1 to 0.05f, 1 to -0.8f, 1 to -FretboardTouchTracker.MAX_VISUAL_BANDS, 1 to 0f),
+            bendVisuals.map { it.first to Math.round(it.second * 100) / 100f },
+        )
     }
 
     @Test
-    fun `bend visual clears when the finger rakes away`() {
-        tracker.down(1L, 2, 5, y(2))
-        tracker.move(1L, 2, 5, y(2, 0.4f))
-        tracker.move(1L, 1, 5, y(1, -0.4f))
+    fun `bend visual clears when the finger rakes away before bending`() {
+        tracker.down(1L, 2, 5, y(2, 0.45f))
+        tracker.move(1L, 2, 5, y(2, 0.48f))   // 걸렸지만 데드존 안: 줄이 살짝 따라온다
+        tracker.move(1L, 1, 5, y(1, -0.47f))  // 레이크
         assertEquals(2 to 0f, bendVisuals.last())
     }
 

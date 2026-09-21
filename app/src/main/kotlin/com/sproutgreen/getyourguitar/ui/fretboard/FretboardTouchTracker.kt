@@ -10,8 +10,9 @@ import kotlin.math.abs
  * |---|---|
  * | down | NoteOn |
  * | move, 같은 줄·다른 프렛 | Slide |
- * | move, 같은 줄 밴드 안에서 세로로 | Bend — down 지점에서 벗어난 거리만큼 음이 올라간다(위·아래 같음) |
- * | move, 다른 줄 진입 | 원래 줄의 벤딩을 풀고 새 줄에 NoteOn(레이크). 이전 줄은 계속 감쇠 |
+ * | move, 세로로 (벤딩이 걸린 뒤) | Bend — 기준점에서 벗어난 거리만큼 음이 올라간다(위·아래 같음) |
+ * | move, 다른 줄 진입 (벤딩 시작 전) | 새 줄에 NoteOn(레이크). 이전 줄은 계속 감쇠 |
+ * | move, 다른 줄 진입 (벤딩 시작 후) | 무시 — 손을 뗄 때까지 짚은 줄에 고정. 벤딩은 최대에서 유지 |
  * | move, 같은 셀·데드존 안 | 무시 |
  * | up / cancel | 벤딩 중이었으면 Bend 0, 아니면 아무것도 보내지 않음(자연 감쇠) |
  *
@@ -22,13 +23,18 @@ import kotlin.math.abs
  * 지나가지만 벤딩은 "튕긴 다음에 민다". 걸리는 순간의 기준점은 직전 이벤트의 손가락 위치다 —
  * down 위치를 그대로 쓰면 그동안 움직인 만큼 음이 한 번에 튄다.
  *
+ * **벤딩과 레이크는 "어디까지 밀었나"가 아니라 "어떻게 시작했나"로 갈린다.** 짚고 나서 밀면 벤딩,
+ * 짚자마자 훑으면 레이크. 처음에는 밴드 경계를 넘으면 레이크로 바꿨는데, 최대 벤딩 지점이 곧 경계라서
+ * 벤딩을 가장 세게 하려는 순간 풀려 버렸다(실기기 피드백 2026-09-21). 그래서 0이 아닌 Bend를 한 번이라도
+ * 보낸 포인터는 그 줄에 고정한다. 대가: 한 줄에 80 ms 넘게 머무는 느린 레이크는 벤딩으로 해석된다.
+ *
  * 세로 위치는 밴드 좌표([FretboardGeometry.bandCoordinate])로 받는다: 1.0 = 줄 밴드 하나의 높이.
  * 같은 줄에 두 포인터가 있으면 둘 다 보내고, 엔진에서 마지막 커맨드가 이긴다.
  */
 class FretboardTouchTracker(
     private val send: (Command) -> Unit,
     private val onSounded: (string: Int, fret: Int) -> Unit = { _, _ -> },
-    /** 줄을 휘어 그리기 위한 콜백. displacement는 밴드 단위 부호 있는 값(±0.5로 제한), 0 = 원위치. */
+    /** 줄을 휘어 그리기 위한 콜백. displacement는 밴드 단위 부호 있는 값(±[MAX_VISUAL_BANDS]로 제한), 0 = 원위치. */
     private val onBend: (string: Int, displacementBands: Float) -> Unit = { _, _ -> },
     private val maxBendCents: Float = DEFAULT_MAX_BEND_CENTS,
     private val clockMs: () -> Long = { System.nanoTime() / 1_000_000 },
@@ -36,6 +42,9 @@ class FretboardTouchTracker(
     private class Pointer(var string: Int, var fret: Int, bandY: Float, val downMs: Long) {
         var bendable = true
         var armed = false
+
+        /** 0이 아닌 Bend를 보낸 적이 있다 = 이 손가락은 벤딩 중. 손을 뗄 때까지 [string]에 고정. */
+        var locked = false
         var anchorBandY = bandY
         var lastBandY = bandY
         var sentCents = 0f
@@ -52,7 +61,7 @@ class FretboardTouchTracker(
     fun move(pointerId: Long, string: Int, fret: Int, bandY: Float) {
         val p = pointers[pointerId] ?: return
 
-        if (string != p.string) {
+        if (string != p.string && !p.locked) {
             releaseBend(p)
             p.bendable = false
             p.string = string
@@ -64,8 +73,8 @@ class FretboardTouchTracker(
 
         if (fret != p.fret) {
             p.fret = fret
-            send(Command.Slide(string, fret))
-            onSounded(string, fret)
+            send(Command.Slide(p.string, fret))
+            onSounded(p.string, fret)
         }
 
         if (p.bendable && !p.armed && clockMs() - p.downMs >= BEND_ARM_MS) {
@@ -76,11 +85,12 @@ class FretboardTouchTracker(
 
         if (p.bendable && p.armed) {
             val displacement = bandY - p.anchorBandY
-            onBend(p.string, displacement.coerceIn(-MAX_TRAVEL_BANDS, MAX_TRAVEL_BANDS))
+            onBend(p.string, displacement.coerceIn(-MAX_VISUAL_BANDS, MAX_VISUAL_BANDS))
             val cents = centsFor(abs(displacement))
             val reachedAnEnd = (cents == 0f || cents == maxBendCents) && cents != p.sentCents
             if (reachedAnEnd || abs(cents - p.sentCents) >= MIN_CENTS_STEP) {
                 p.sentCents = cents
+                if (cents > 0f) p.locked = true
                 send(Command.Bend(p.string, cents))
             }
         }
@@ -119,6 +129,9 @@ class FretboardTouchTracker(
 
         /** 이만큼 밀면 최대 벤딩. 밴드 중앙을 짚었을 때 옆 줄 경계까지의 거리와 같다. */
         const val MAX_TRAVEL_BANDS = 0.5f
+
+        /** 휘는 줄 표시가 손가락을 따라가는 한계. 음은 [MAX_TRAVEL_BANDS]에서 이미 최대다. */
+        const val MAX_VISUAL_BANDS = 1.5f
 
         const val MIN_CENTS_STEP = 1f
 
