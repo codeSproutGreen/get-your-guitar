@@ -1,5 +1,7 @@
 # M2 "연주감과 설정" 구현 계획
 
+> **2026-09-21 갱신: 이 계획은 v2 기능 정의(`../specs/2026-09-21-v2-features.md`)에 흡수돼 그쪽 6장 "구현 기록"대로 구현됐다.** 달라진 점: 커맨드 타입은 6 NoteOff / 7 SetBrightness / 8 SetDecay, 설정 키에서 메트로놈·프렛 간격 제외, `holdToSustain` 추가, ViewModel 대신 `AppState`. 아래 본문은 당시 계획 그대로 남긴다.
+
 - 작성일: 2026-09-21 (SDS PC)
 - 스펙: `docs/superpowers/specs/2026-09-16-get-your-guitar-v1-design.md` — 5.2(ToneParams·에너지 딥), 5.4(커맨드), 6.4(설정), 6.5(조립), 7장, 9장 M2
 - 목표: 음색을 조절할 수 있고 설정이 유지된다.

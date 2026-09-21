@@ -24,6 +24,15 @@
 Windows Git Bash에서는 `./gradlew.bat`. `JAVA_HOME`(JDK 17+)과 `ANDROID_HOME` 또는 `local.properties`의 `sdk.dir`이 필요하다.
 compileSdk 37 / targetSdk 36 / minSdk 31 (테스트 폰 Galaxy S10e가 Android 12라서 31). 필요한 SDK 플랫폼(`platforms;android-37`)은 라이선스가 수락돼 있으면 AGP가 자동 다운로드한다.
 
+### 음색을 PC에서 들어 보기
+
+```bash
+./gradlew :core:test --tests "*ToneDemoRender*" -Dgyg.renderWav=true -Dgyg.renderLabel=now
+# → core/build/tone-demo/now.wav  (개방현 → 리프 → 고음 → 슬라이드 → 벤딩 → 화음, 13초)
+```
+합성 코드를 바꾸기 전후에 라벨만 달리해 두 번 렌더하면 같은 악보의 A/B 비교가 된다. 폰 스피커는 250 Hz 아래를 못 내므로
+베이스 음색은 이어폰·스피커로도 들어 봐야 한다. WAV는 저장소에 넣지 않는다.
+
 ### 릴리스 APK
 
 ```bash
