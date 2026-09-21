@@ -33,7 +33,6 @@ class DataStoreSettingsRepository(private val store: DataStore<Preferences>) : S
             prefs[MASTER_VOLUME] = next.masterVolume
             prefs[BRIGHTNESS] = next.brightness
             prefs[DECAY] = next.decay
-            prefs[HOLD_TO_SUSTAIN] = next.holdToSustain
             prefs[BEND_RANGE_CENTS] = next.bendRangeCents
             prefs[SHOW_NOTE_NAMES] = next.showNoteNames
             prefs[AUDIO_BUFFER_CHUNKS] = next.audioBufferChunks
@@ -46,7 +45,6 @@ class DataStoreSettingsRepository(private val store: DataStore<Preferences>) : S
             masterVolume = this[MASTER_VOLUME] ?: d.masterVolume,
             brightness = this[BRIGHTNESS] ?: d.brightness,
             decay = this[DECAY] ?: d.decay,
-            holdToSustain = this[HOLD_TO_SUSTAIN] ?: d.holdToSustain,
             bendRangeCents = this[BEND_RANGE_CENTS] ?: d.bendRangeCents,
             showNoteNames = this[SHOW_NOTE_NAMES] ?: d.showNoteNames,
             audioBufferChunks = this[AUDIO_BUFFER_CHUNKS] ?: d.audioBufferChunks,
@@ -57,7 +55,6 @@ class DataStoreSettingsRepository(private val store: DataStore<Preferences>) : S
         val MASTER_VOLUME = floatPreferencesKey("master_volume")
         val BRIGHTNESS = floatPreferencesKey("brightness")
         val DECAY = floatPreferencesKey("decay")
-        val HOLD_TO_SUSTAIN = booleanPreferencesKey("hold_to_sustain")
         val BEND_RANGE_CENTS = intPreferencesKey("bend_range_cents")
         val SHOW_NOTE_NAMES = booleanPreferencesKey("show_note_names")
         val AUDIO_BUFFER_CHUNKS = intPreferencesKey("audio_buffer_chunks")

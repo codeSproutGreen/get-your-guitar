@@ -6,7 +6,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class FretboardGeometryTest {
-    // 연주 영역 1200 x 880: 띠 80 + 지판 720 + 띠 80, 셀 폭 100, 줄 밴드 180
+    // 연주 영역 1200 x 880: 위 띠 80 + 지판 660 + 뮤트 바 140, 셀 폭 100, 줄 밴드 165
     private val geo = FretboardGeometry(width = 1200f, height = 880f)
 
     @Test
@@ -29,25 +29,37 @@ class FretboardGeometryTest {
     }
 
     @Test
-    fun `areas split into strip, board, strip`() {
+    fun `areas split into scroll strip, board, mute bar`() {
         assertEquals(80f, geo.boardTop, 1e-3f)
-        assertEquals(800f, geo.boardBottom, 1e-3f)
+        assertEquals(740f, geo.boardBottom, 1e-3f)
+        assertEquals(140f, geo.muteBarHeight, 1e-3f)
         assertEquals(100f, geo.cellWidth, 1e-3f)
-        assertEquals(180f, geo.bandHeight, 1e-3f)
+        assertEquals(165f, geo.bandHeight, 1e-3f)
         assertFalse(geo.isOnBoard(79f))
         assertTrue(geo.isOnBoard(80f))
-        assertTrue(geo.isOnBoard(799f))
-        assertFalse(geo.isOnBoard(800f))
+        assertTrue(geo.isOnBoard(739f))
+        assertFalse(geo.isOnBoard(740f))
+    }
+
+    @Test
+    fun `the mute bar is everything below the board and the scroll strip is everything above`() {
+        assertTrue(geo.isOnMuteBar(740f))
+        assertTrue(geo.isOnMuteBar(879f))
+        assertFalse(geo.isOnMuteBar(739f))
+        assertFalse(geo.isOnMuteBar(10f))
+        assertTrue(geo.isOnScrollStrip(10f))
+        assertFalse(geo.isOnScrollStrip(80f))
+        assertFalse(geo.isOnScrollStrip(800f))
     }
 
     @Test
     fun `strings run G at the top to E at the bottom`() {
         assertEquals(3, geo.stringAt(80f))
-        assertEquals(3, geo.stringAt(259f))
-        assertEquals(2, geo.stringAt(260f))
-        assertEquals(1, geo.stringAt(440f))
-        assertEquals(0, geo.stringAt(620f))
-        assertEquals(0, geo.stringAt(799f))
+        assertEquals(3, geo.stringAt(244f))
+        assertEquals(2, geo.stringAt(245f))
+        assertEquals(1, geo.stringAt(410f))
+        assertEquals(0, geo.stringAt(575f))
+        assertEquals(0, geo.stringAt(739f))
     }
 
     @Test
@@ -60,8 +72,8 @@ class FretboardGeometryTest {
 
     @Test
     fun `string centre lines sit in the middle of each band`() {
-        assertEquals(170f, geo.stringCenterY(3), 1e-3f)
-        assertEquals(710f, geo.stringCenterY(0), 1e-3f)
+        assertEquals(162.5f, geo.stringCenterY(3), 1e-3f)
+        assertEquals(657.5f, geo.stringCenterY(0), 1e-3f)
     }
 
     @Test
@@ -116,9 +128,9 @@ class FretboardGeometryTest {
     @Test
     fun `band coordinate measures vertical position in string bands`() {
         assertEquals(0f, geo.bandCoordinate(80f), 1e-4f)      // 지판 위쪽 끝
-        assertEquals(0.5f, geo.bandCoordinate(170f), 1e-4f)   // G줄 중심
-        assertEquals(3.5f, geo.bandCoordinate(710f), 1e-4f)   // E줄 중심
-        assertEquals(-0.5f, geo.bandCoordinate(-10f), 1e-4f)  // 지판 밖은 클램프하지 않는다(벤딩량 계산용)
+        assertEquals(0.5f, geo.bandCoordinate(162.5f), 1e-4f) // G줄 중심
+        assertEquals(3.5f, geo.bandCoordinate(657.5f), 1e-4f) // E줄 중심
+        assertEquals(-0.5f, geo.bandCoordinate(-2.5f), 1e-4f) // 지판 밖은 클램프하지 않는다(벤딩량 계산용)
         // 줄 s의 중심은 항상 (stringCount − 1 − s) + 0.5
         for (s in 0..3) assertEquals((3 - s) + 0.5f, geo.bandCoordinate(geo.stringCenterY(s)), 1e-4f)
     }

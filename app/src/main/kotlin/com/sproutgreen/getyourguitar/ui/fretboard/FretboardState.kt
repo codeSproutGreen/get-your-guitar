@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -31,8 +32,11 @@ class FretboardState {
 
     val highlights = mutableStateListOf<Highlight>()
 
-    /** true = 누르고 있는 동안만 소리. 하이라이트도 소리와 같이 움직인다: 누르는 동안 켜져 있고 떼면 바로 사라진다. */
-    var holdToSustain: Boolean = true
+    /**
+     * 뮤트 바를 누르고 있는가. 그리기(바의 색)와 하이라이트에 쓴다: 뮤트 중에 튕긴 음은 소리처럼
+     * 누르는 동안 켜져 있고 떼면 바로 사라진다. 아니면 1.5 s에 걸쳐 사라진다.
+     */
+    var mutePressed by mutableStateOf(false)
 
     /** 줄 번호 → 벤딩 표시. 벤딩 중인 줄만 들어 있다. */
     val bends = mutableStateMapOf<Int, BendVisual>()
@@ -65,7 +69,7 @@ class FretboardState {
     /** 줄당 하이라이트는 하나. 슬라이드·레이크·풀오프로 셀이 바뀌면 새 셀에서 다시 시작한다. */
     fun highlight(string: Int, fret: Int) {
         highlights.removeAll { it.string == string }
-        highlights.add(Highlight(string, fret, System.nanoTime(), held = holdToSustain, fadeNanos = RING_FADE_NANOS))
+        highlights.add(Highlight(string, fret, System.nanoTime(), held = mutePressed, fadeNanos = RING_FADE_NANOS))
     }
 
     /** 줄이 멈췄다([FretboardTouchTracker]의 onReleased). 그 줄의 하이라이트를 짧게 끈다. */

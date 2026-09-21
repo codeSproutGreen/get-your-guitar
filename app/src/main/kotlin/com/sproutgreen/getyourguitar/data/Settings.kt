@@ -9,13 +9,8 @@ import com.sproutgreen.getyourguitar.core.engine.Command
 data class Settings(
     val masterVolume: Float = 0.8f,
     val brightness: Float = 0.6f,
-    /**
-     * 누르고 있을 때 음이 버티는 길이. v1.0.0은 0.7이었지만 [holdToSustain]이 기본이 되면서
-     * 음 길이는 손가락이 정하게 됐으므로 더 길게 잡는다.
-     */
-    val decay: Float = 0.8f,
-    /** true = 누르고 있는 동안만 소리, 떼면 멈춤. false = 떼도 자연 감쇠(v1.0.0 동작). */
-    val holdToSustain: Boolean = true,
+    /** 줄이 스스로 잦아드는 길이. 클수록 오래 울린다. 음을 일찍 끊는 건 설정이 아니라 지판 아래의 뮤트 바다. */
+    val decay: Float = 0.7f,
     /** 최대 벤딩 폭. 200 = 온음, 400 = 두 온음. */
     val bendRangeCents: Int = 200,
     val showNoteNames: Boolean = false,

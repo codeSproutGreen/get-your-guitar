@@ -20,9 +20,9 @@ import kotlin.test.assertTrue
 
 class SettingsTest {
     @Test
-    fun `defaults are hold-to-sustain, whole-tone bend, two buffer chunks`() {
+    fun `defaults are natural decay 0_7, whole-tone bend, two buffer chunks`() {
         val d = Settings.DEFAULT
-        assertTrue(d.holdToSustain)
+        assertEquals(0.7f, d.decay)
         assertEquals(200, d.bendRangeCents)
         assertEquals(2, d.audioBufferChunks)
         assertFalse(d.showNoteNames)
@@ -71,7 +71,7 @@ class SettingsTest {
     @Test
     fun `ui-only settings send nothing to the engine`() {
         val a = Settings()
-        val b = a.copy(holdToSustain = false, bendRangeCents = 400, showNoteNames = true)
+        val b = a.copy(bendRangeCents = 400, showNoteNames = true)
         assertEquals(emptyList(), SettingsDiff.commands(a, b))
         assertFalse(SettingsDiff.needsOutputRestart(a, b))
     }
@@ -103,7 +103,7 @@ class SettingsTest {
 
     @Test
     fun `updates are persisted and read back`(@TempDir dir: File) {
-        val wanted = Settings(0.4f, 0.9f, 0.1f, holdToSustain = false, bendRangeCents = 400, showNoteNames = true, audioBufferChunks = 3)
+        val wanted = Settings(0.4f, 0.9f, 0.1f, bendRangeCents = 400, showNoteNames = true, audioBufferChunks = 3)
         withRepository(dir) { repo ->
             repo.update { wanted }
             assertEquals(wanted, repo.settings.first())

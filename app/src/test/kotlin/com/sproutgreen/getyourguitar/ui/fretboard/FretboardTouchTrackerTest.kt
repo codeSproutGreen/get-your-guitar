@@ -7,7 +7,7 @@ import kotlin.test.assertTrue
 
 /**
  * 스펙 6.2 "제스처 → 커맨드" 표의 각 행 + 벤딩 규칙.
- * 여기서는 "떼도 울림" 모드(holdToSustain = false, v1.0.0 동작)로 본다. 누르는 동안만 소리는 [FretboardHoldSustainTest].
+ * 여기서는 뮤트 바를 누르지 않은 기본 상태(떼도 자연 감쇠)로 본다. 뮤트를 누른 상태는 [FretboardHoldSustainTest], 누르고 떼는 동작은 [FretboardMuteTest].
  */
 class FretboardTouchTrackerTest {
     private val sent = mutableListOf<Command>()
@@ -22,7 +22,7 @@ class FretboardTouchTrackerTest {
         onBend = { string, displacement -> bendVisuals += string to displacement },
         maxBendCents = 200f,
         clockMs = { nowMs += stepMs; nowMs },
-    ).also { it.holdToSustain = false }
+    )
 
     /** 밴드 좌표: 0 = 지판 위쪽 끝, 줄 s의 중심 = (3 − s) + 0.5. [offset]은 밴드 높이 단위. */
     private fun y(string: Int, offset: Float = 0f): Float = (3 - string) + 0.5f + offset
@@ -341,7 +341,6 @@ class FretboardTouchTrackerTest {
         val wide = mutableListOf<Command>()
         var t0 = 0L
         val t = FretboardTouchTracker(send = { wide += it }, maxBendCents = 400f, clockMs = { t0 += 100; t0 })
-        t.holdToSustain = false
         t.down(1L, 0, 3, y(0))
         t.move(1L, 0, 3, y(0, 0.5f))
         assertEquals(Command.Bend(0, 400f), wide.last())

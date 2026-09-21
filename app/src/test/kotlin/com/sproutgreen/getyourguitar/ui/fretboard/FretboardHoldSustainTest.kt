@@ -6,8 +6,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * "누르고 있는 동안만 소리" (요청 2026-09-21). 줄마다 누르고 있는 손가락을 쌓아 두고,
- * 맨 위(가장 나중에 누른) 손가락이 그 줄의 음을 소유한다.
+ * 뮤트 바를 누르고 있는 동안의 동작 = "누르고 있는 동안만 소리" (요청 2026-09-21).
+ * 줄마다 누르고 있는 손가락을 쌓아 두고, 맨 위(가장 나중에 누른) 손가락이 그 줄의 음을 소유한다.
+ * 이 클래스의 추적기는 처음부터 끝까지 뮤트가 눌린 상태다. 뮤트를 누르고 떼는 동작 자체는 [FretboardMuteTest].
  */
 class FretboardHoldSustainTest {
     private val sent = mutableListOf<Command>()
@@ -21,13 +22,13 @@ class FretboardHoldSustainTest {
         onBend = { string, displacement -> bendVisuals += string to displacement },
         onReleased = { released += it },
         clockMs = { nowMs += 100; nowMs },
-    )
+    ).also { it.setMute(true) }
 
     private fun y(string: Int, offset: Float = 0f): Float = (3 - string) + 0.5f + offset
 
     @Test
-    fun `hold to sustain is the default`() {
-        assertTrue(tracker.holdToSustain)
+    fun `this tracker is muting`() {
+        assertTrue(tracker.muting)
     }
 
     @Test
@@ -63,6 +64,7 @@ class FretboardHoldSustainTest {
     fun `raked strings keep ringing until the raking finger lifts, then all stop`() {
         nowMs = 0
         val fast = FretboardTouchTracker(send = { sent += it }, onReleased = { released += it }, clockMs = { nowMs += 10; nowMs })
+        fast.setMute(true)
         fast.down(1L, 3, 5, y(3))
         fast.move(1L, 2, 5, y(2))
         fast.move(1L, 1, 5, y(1))
@@ -77,6 +79,7 @@ class FretboardHoldSustainTest {
     fun `raking back over a string already held stops it only once`() {
         nowMs = 0
         val fast = FretboardTouchTracker(send = { sent += it }, clockMs = { nowMs += 10; nowMs })
+        fast.setMute(true)
         fast.down(1L, 3, 5, y(3))
         fast.move(1L, 2, 5, y(2))
         fast.move(1L, 3, 5, y(3)) // 되돌아옴: 다시 튕기지만 소유 목록에는 한 번만
@@ -173,8 +176,8 @@ class FretboardHoldSustainTest {
     }
 
     @Test
-    fun `ring mode leaves notes ringing and only releases bends`() {
-        tracker.holdToSustain = false
+    fun `after the mute bar is released notes ring again and only bends are released`() {
+        tracker.setMute(false)
         tracker.down(1L, 1, 5, y(1))
         tracker.move(1L, 1, 5, y(1, 0.4f))
         tracker.up(1L)
@@ -186,7 +189,8 @@ class FretboardHoldSustainTest {
         tracker.down(2L, 1, 5, y(1))
         tracker.down(3L, 1, 7, y(1))
         tracker.up(3L)
-        assertEquals(listOf<Command>(Command.NoteOn(1, 5), Command.NoteOn(1, 7)), sent) // 풀오프도 없음: v1.0.0 그대로
+        // 풀오프는 뮤트와 무관하게 된다(실제 악기처럼). 멈추는 것만 뮤트가 정한다.
+        assertEquals(listOf(Command.NoteOn(1, 5), Command.NoteOn(1, 7), Command.Slide(1, 5)), sent)
     }
 
     @Test

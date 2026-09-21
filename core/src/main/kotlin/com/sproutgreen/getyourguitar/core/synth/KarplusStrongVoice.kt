@@ -339,7 +339,7 @@ class KarplusStrongVoice(
         const val FADE_MS = 2f
 
         /** noteOff의 길이. 출력만 내리는 선형 페이드라 음높이와 무관하다(E1은 주기가 24 ms라 루프 감쇠로는 못 맞춘다). */
-        const val RELEASE_MS = 45f
+        const val RELEASE_MS = 30f
 
         /** 슬라이드 중 가장 깊은 지점의 음량 감소(스펙 5.2의 0.85). */
         const val SLIDE_DIP = 0.15f

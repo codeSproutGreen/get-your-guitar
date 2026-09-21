@@ -29,7 +29,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -92,12 +91,12 @@ fun SettingsScreen(
                     LabeledSlider("볼륨", settings.masterVolume, onPreview, onCommit) { s, v -> s.copy(masterVolume = v) }
                     LabeledSlider("밝기", settings.brightness, onPreview, onCommit) { s, v -> s.copy(brightness = v) }
                     LabeledSlider("감쇠", settings.decay, onPreview, onCommit) { s, v -> s.copy(decay = v) }
-                    Text("감쇠가 클수록 누르고 있을 때 오래 울립니다", color = TextDim, fontSize = 11.sp)
+                    Text("감쇠가 클수록 오래 울립니다. 일찍 끊으려면 지판 아래의 뮤트 바를 누르세요", color = TextDim, fontSize = 11.sp)
                 }
-                Section("시험음 — 누르고 있으면 울립니다") {
+                Section("시험음 (개방현)") {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         for ((string, name) in listOf(0 to "E", 1 to "A", 2 to "D", 3 to "G")) {
-                            TestToneButton(name, string, settings.holdToSustain, audio, Modifier.weight(1f))
+                            TestToneButton(name, string, audio, Modifier.weight(1f))
                         }
                     }
                 }
@@ -110,12 +109,6 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Section("연주 · 표시") {
-                    SwitchRow(
-                        title = "누르고 있는 동안만 소리",
-                        subtitle = if (settings.holdToSustain) "손을 떼면 음이 멈춥니다" else "손을 떼도 자연스럽게 잦아듭니다",
-                        checked = settings.holdToSustain,
-                        onChange = { on -> onCommit { it.copy(holdToSustain = on) } },
-                    )
                     ChoiceRow(
                         title = "벤딩 폭",
                         options = listOf(200 to "1음", 400 to "2음"),
@@ -225,10 +218,9 @@ private fun Pill(text: String, selected: Boolean, onClick: () -> Unit) {
     }
 }
 
-/** 개방현 시험음. 누르면 NoteOn, 떼면 (누르는 동안만 소리 모드에서) NoteOff — 지판과 같은 느낌으로 설정을 들어 볼 수 있다. */
+/** 개방현 시험음. 지판에서 뮤트 없이 친 것처럼 자연 감쇠한다 — 감쇠·밝기 슬라이더를 귀로 맞추기 위한 것. */
 @Composable
-private fun TestToneButton(name: String, string: Int, holdToSustain: Boolean, audio: AudioController, modifier: Modifier = Modifier) {
-    val hold by rememberUpdatedState(holdToSustain)
+private fun TestToneButton(name: String, string: Int, audio: AudioController, modifier: Modifier = Modifier) {
     var pressed by remember { mutableStateOf(false) }
     Box(
         modifier
@@ -240,7 +232,6 @@ private fun TestToneButton(name: String, string: Int, holdToSustain: Boolean, au
                         pressed = true
                         audio.send(Command.NoteOn(string, 0))
                         tryAwaitRelease()
-                        if (hold) audio.send(Command.NoteOff(string))
                         pressed = false
                     },
                 )

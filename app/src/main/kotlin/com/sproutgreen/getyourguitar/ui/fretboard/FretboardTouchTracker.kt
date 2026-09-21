@@ -14,15 +14,19 @@ import kotlin.math.abs
  * | move, 다른 줄 진입 (벤딩 시작 전) | 새 줄에 NoteOn(레이크). 이전 줄도 이 손가락이 계속 쥐고 있다 |
  * | move, 다른 줄 진입 (벤딩 시작 후) | 무시 — 손을 뗄 때까지 짚은 줄에 고정. 벤딩은 최대에서 유지 |
  * | move, 같은 셀·데드존 안 | 무시 |
- * | up / cancel | [holdToSustain]이면 쥐고 있던 줄을 멈춘다(NoteOff) 또는 풀오프. 아니면 벤딩만 풀고 자연 감쇠 |
+ * | up / cancel | 아래에 다른 손가락이 있으면 풀오프. 없으면: [muting]일 때 NoteOff, 아니면 벤딩만 풀고 자연 감쇠 |
+ * | 뮤트 바 누름 ([setMute]) | 손가락이 떠난 채 울리던 줄을 전부 NoteOff. 아직 누르고 있는 음은 그대로 |
  *
- * **누르고 있는 동안만 소리([holdToSustain], 요청 2026-09-21).** 줄마다 누르고 있는 손가락을 쌓아 두고
- * 맨 위(가장 나중에 누른) 손가락이 그 줄의 음을 소유한다.
+ * **뮤트 바(요청 2026-09-21).** 지판 아래의 긴 버튼을 누르고 있는 동안([muting])은 음이 손가락으로 누르고 있을
+ * 때만 나고, 떼면 멈춘다. 안 누르고 있으면 떼도 자연 감쇠한다. 처음에는 설정의 스위치였는데, 연주 중에 손으로
+ * 바로 오갈 수 있어야 해서 버튼이 됐다 — 실제 베이스의 팜 뮤트와 같은 역할이다.
+ *
+ * **소유권.** 줄마다 누르고 있는 손가락을 쌓아 두고 맨 위(가장 나중에 누른) 손가락이 그 줄의 음을 소유한다.
  * - 소유자만 Slide·Bend를 보낸다. 아래에 깔린 손가락은 조용히 움직인다.
- * - 소유자가 떼면: 아래에 다른 손가락이 있으면 그 프렛으로 돌아가고(풀오프), 없으면 NoteOff.
+ * - 소유자가 떼면: 아래에 다른 손가락이 있으면 그 프렛으로 돌아간다(풀오프, 뮤트와 무관). 없으면 위 표대로.
  *   → 한 손가락으로 누른 채 다른 손가락으로 같은 줄을 치면 해머온, 떼면 풀오프가 된다.
  * - 소유자가 아닌 손가락을 떼면 아무 일도 없다.
- * - 레이크로 훑은 줄은 전부 그 손가락의 것이고, 떼면 한꺼번에 멈춘다. 지나가자마자 멈추면 화음을 쌓을 수 없다.
+ * - 레이크로 훑은 줄은 전부 그 손가락의 것이고, (뮤트 중이면) 떼면 한꺼번에 멈춘다. 지나가자마자 멈추면 화음을 쌓을 수 없다.
  *
  * **벤딩과 레이크는 "어디까지 밀었나"가 아니라 "어떻게 시작했나"로 갈린다.** 짚고 나서 밀면 벤딩,
  * 짚자마자 훑으면 레이크. 벤딩은 down으로 짚은 줄에서만, 터치 후 [BEND_ARM_MS]가 지나야 걸린다
@@ -38,13 +42,17 @@ class FretboardTouchTracker(
     private val onSounded: (string: Int, fret: Int) -> Unit = { _, _ -> },
     /** 줄을 휘어 그리기 위한 콜백. displacement는 밴드 단위 부호 있는 값(±[MAX_VISUAL_BANDS]로 제한), 0 = 원위치. */
     private val onBend: (string: Int, displacementBands: Float) -> Unit = { _, _ -> },
-    /** [holdToSustain]에서 줄이 멈췄다. 하이라이트를 끄는 데 쓴다. */
+    /** 뮤트로 줄이 멈췄다. 하이라이트를 끄는 데 쓴다. */
     private val onReleased: (string: Int) -> Unit = {},
     maxBendCents: Float = DEFAULT_MAX_BEND_CENTS,
     private val clockMs: () -> Long = { System.nanoTime() / 1_000_000 },
 ) {
-    /** true = 누르고 있는 동안만 소리. false = 떼도 자연 감쇠(v1.0.0 동작). 설정에서 바꾼다. */
-    var holdToSustain: Boolean = true
+    /** 뮤트 바를 누르고 있는가. true인 동안은 손가락을 떼면 그 음이 멈춘다. [setMute]로만 바꾼다. */
+    var muting: Boolean = false
+        private set
+
+    /** NoteOn을 보낸 뒤 아직 NoteOff를 보내지 않은 줄. 뮤트를 누를 때 끊을 후보다(이미 자연 감쇠로 죽었어도 무해하다). */
+    private val ringing = HashSet<Int>()
 
     /** 최대 벤딩 폭. 200 = 온음, 400 = 두 온음. 설정에서 바꾼다. */
     var maxBendCents: Float = maxBendCents
@@ -67,10 +75,31 @@ class FretboardTouchTracker(
     /** 줄 → 누르고 있는 손가락들(누른 순서). 마지막이 소유자. */
     private val holders = HashMap<Int, ArrayList<Pointer>>()
 
+    /** 뮤트 바를 눌렀다/뗐다. 누르는 순간, 아무 손가락도 쥐고 있지 않은 채 울리던 줄을 끊는다. */
+    fun setMute(pressed: Boolean) {
+        if (pressed == muting) return
+        muting = pressed
+        if (!pressed) return
+        val strings = ringing.iterator()
+        while (strings.hasNext()) {
+            val string = strings.next()
+            if (holders[string].isNullOrEmpty()) {
+                strings.remove()
+                send(Command.NoteOff(string))
+                onReleased(string)
+            }
+        }
+    }
+
     fun down(pointerId: Long, string: Int, fret: Int, bandY: Float) {
         val p = Pointer(string, bandY, clockMs())
         pointers[pointerId] = p
         hold(p, string, fret)
+        pluck(string, fret)
+    }
+
+    private fun pluck(string: Int, fret: Int) {
+        ringing.add(string)
         send(Command.NoteOn(string, fret))
         onSounded(string, fret)
     }
@@ -83,8 +112,7 @@ class FretboardTouchTracker(
             p.bendable = false
             p.string = string
             hold(p, string, fret)
-            send(Command.NoteOn(string, fret))
-            onSounded(string, fret)
+            pluck(string, fret)
             return
         }
 
@@ -138,11 +166,6 @@ class FretboardTouchTracker(
     private fun owns(p: Pointer, string: Int): Boolean = holders[string]?.lastOrNull() === p
 
     private fun lift(p: Pointer) {
-        if (!holdToSustain) {
-            for (string in p.frets.keys) holders[string]?.remove(p)
-            releaseBend(p, sendZero = true)
-            return
-        }
         for (string in p.frets.keys) {
             val stack = holders[string] ?: continue
             val wasOwner = stack.lastOrNull() === p
@@ -156,12 +179,16 @@ class FretboardTouchTracker(
                 val fret = next.frets.getValue(string)
                 send(Command.Slide(string, fret))
                 onSounded(string, fret)
-            } else {
-                // 음이 멈춘다. Bend 0을 먼저 보내면 꺼지는 45 ms 동안 음높이가 툭 떨어지므로 보내지 않는다.
+            } else if (muting) {
+                // 음이 멈춘다. Bend 0을 먼저 보내면 꺼지는 동안 음높이가 툭 떨어지므로 보내지 않는다.
                 // 엔진은 다음 NoteOn에서 벤딩을 0으로 되돌린다.
                 if (string == p.string) releaseBend(p, sendZero = false)
+                ringing.remove(string)
                 send(Command.NoteOff(string))
                 onReleased(string)
+            } else {
+                // 뮤트를 누르지 않았다: 줄은 계속 울린다. 벤딩만 원래 음으로 돌린다.
+                if (string == p.string) releaseBend(p, sendZero = true)
             }
         }
     }

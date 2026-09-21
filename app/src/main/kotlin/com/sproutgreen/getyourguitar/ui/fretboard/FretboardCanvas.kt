@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -28,6 +29,9 @@ import kotlin.math.floor
 import kotlin.math.min
 
 private val StripColor = Color(0xFF17120E)
+private val MuteBarColor = Color(0xFF2B221C)
+private val MuteBarPressed = Color(0xFFFFB300)
+private val MuteBarText = Color(0xFFB8A99A)
 private val StripTextColor = Color(0xFFB8A99A)
 private val WoodTop = Color(0xFF6B4528)
 private val WoodBottom = Color(0xFF43290F)
@@ -44,7 +48,7 @@ private val NameText = Color(0xFFF5EFE4)
 private val SINGLE_MARKS = intArrayOf(3, 5, 7, 9, 15, 17, 19, 21)
 private val DOUBLE_MARKS = intArrayOf(12, 24)
 
-/** 위 띠(프렛 번호) + 지판 + 아래 띠를 한 Canvas에 그린다. 터치는 받지 않는다(제스처는 바깥 Modifier). */
+/** 위 띠(프렛 번호) + 지판 + 뮤트 바를 한 Canvas에 그린다. 터치는 받지 않는다(제스처는 바깥 Modifier). */
 @Composable
 fun FretboardCanvas(
     state: FretboardState,
@@ -74,6 +78,7 @@ fun FretboardCanvas(
 
         drawBoard(geometry, layout, firstFret, lastFret)
         drawStrips(geometry, layout, firstFret, lastFret, textMeasurer)
+        drawMuteBar(geometry, state.mutePressed, textMeasurer)
         drawHighlights(geometry, layout, state.highlights, nowNanos)
         drawStrings(geometry, state.bends)
         if (showNoteNames) drawNoteNames(geometry, layout, fretboard, firstFret, lastFret, textMeasurer)
@@ -124,7 +129,6 @@ private fun DrawScope.drawStrips(
     textMeasurer: TextMeasurer,
 ) {
     drawRect(StripColor, Offset.Zero, Size(size.width, geometry.stripHeight))
-    drawRect(StripColor, Offset(0f, geometry.boardBottom), Size(size.width, geometry.stripHeight))
 
     val style = TextStyle(color = StripTextColor, fontSize = 13.sp, fontWeight = FontWeight.Medium)
     for (fret in firstFret..lastFret) {
@@ -133,6 +137,23 @@ private fun DrawScope.drawStrips(
         if (x + text.size.width < 0f || x > size.width) continue
         drawText(text, topLeft = Offset(x, (geometry.stripHeight - text.size.height) / 2f))
     }
+}
+
+private fun DrawScope.drawMuteBar(geometry: FretboardGeometry, pressed: Boolean, textMeasurer: TextMeasurer) {
+    drawRect(StripColor, Offset(0f, geometry.boardBottom), Size(size.width, geometry.muteBarHeight))
+    val inset = 6.dp.toPx()
+    val top = geometry.boardBottom + inset
+    val barHeight = geometry.muteBarHeight - 2 * inset
+    drawRoundRect(
+        color = if (pressed) MuteBarPressed else MuteBarColor,
+        topLeft = Offset(inset, top),
+        size = Size(size.width - 2 * inset, barHeight),
+        cornerRadius = CornerRadius(barHeight / 2f),
+    )
+    val label = if (pressed) "뮤트 — 손을 떼면 소리가 멈춥니다" else "뮤트 — 누르고 있으면 손 뗀 음이 끊깁니다"
+    val style = TextStyle(color = if (pressed) Color.Black else MuteBarText, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+    val text = textMeasurer.measure(label, style)
+    drawText(text, topLeft = Offset((size.width - text.size.width) / 2f, top + (barHeight - text.size.height) / 2f))
 }
 
 private fun DrawScope.drawStrings(geometry: FretboardGeometry, bends: Map<Int, BendVisual>) {

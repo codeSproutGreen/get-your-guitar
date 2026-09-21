@@ -39,7 +39,7 @@ private val ToggleOn = Color(0xFFFFB300)
 private val ToggleOff = Color(0xFF3A2F27)
 private val ErrorColor = Color(0xFFFF6B5E)
 
-/** 상단 바 12% + 연주 영역 88%(띠 8 · 지판 72 · 띠 8). 메트로놈은 나중에 상단 바 오른쪽에 들어온다. */
+/** 상단 바 12% + 연주 영역 88%(스크롤 띠 8 · 지판 66 · 뮤트 바 14). 메트로놈은 나중에 상단 바 오른쪽에 들어온다. */
 @Composable
 fun FretboardScreen(
     audio: AudioController,
@@ -62,9 +62,7 @@ fun FretboardScreen(
 
     // 추적기와 상태는 컴포지션 밖의 평범한 객체라 설정이 바뀔 때마다 값을 밀어 넣는다.
     SideEffect {
-        tracker.holdToSustain = settings.holdToSustain
         tracker.maxBendCents = settings.bendRangeCents.toFloat()
-        state.holdToSustain = settings.holdToSustain
     }
 
     Column(
