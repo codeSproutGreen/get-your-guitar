@@ -35,7 +35,7 @@ Android 앱 프로젝트 (베이스 지판 시뮬레이터). Kotlin 2.4 + Jetpac
 - `:app`은 AGP built-in Kotlin을 쓴다 — `org.jetbrains.kotlin.android` 플러그인을 적용하지 않는다.
 - Claude Code Bash 도구의 heredoc은 연속된 백슬래시 2개를 1개로 깎는다. 백슬래시가 든 Kotlin/정규식 문자열은 Edit 도구로 쓴다.
 - 실기기 확인(SDS PC): `./gradlew.bat :app:installDebug` → `adb shell am start -W -n com.sproutgreen.getyourguitar/.MainActivity` → `adb exec-out screencap -p > <scratchpad>/x.png` 로 스크린샷을 읽어 확인한다. Git Bash에서 `adb shell`에 `/sdcard/...` 경로를 넘길 때는 `export MSYS_NO_PATHCONV=1` 필수.
-- 실기기 터치 주입: `adb shell input tap X Y` / `input swipe X1 Y1 X2 Y2 ms`, 결과는 `adb logcat -d -s gyg-cmd:D`(디버그 빌드에서 커맨드 로그)와 `gyg-audio:V`(트랙 시작 로그). 멀티터치는 주입 불가 — 사람이 확인한다. S10e 기준 좌표: 왼쪽 컷아웃 여백 116 px, 셀 폭 ≈180 px, 줄 중심 y = G 313 / D 508 / A 702 / E 896.
+- 실기기 터치 주입: `adb shell input tap X Y` / `input swipe X1 Y1 X2 Y2 ms`, 결과는 `adb logcat -d -s gyg-cmd:D`(디버그 빌드에서 커맨드 로그)와 `gyg-audio:V`(트랙 시작 로그). 멀티터치는 주입 불가 — 사람이 확인한다. S10e 기준 좌표(뮤트 바가 생긴 뒤): 왼쪽 컷아웃 여백 116 px, 셀 폭 ≈180 px, 줄 중심 y = G 305 / D 483 / A 661 / E 840, 스크롤 띠 y≈170, 뮤트 바 y≈1004, 상단 바의 설정 버튼 (230, 64).
 - 오디오 경로 확인: `adb shell dumpsys media.audio_flinger` 에서 앱 pid의 트랙 Type이 `F`로 시작하면 FAST 트랙.
 
 ## 코드 규칙
