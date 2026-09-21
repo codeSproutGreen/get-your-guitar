@@ -5,7 +5,10 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** 스펙 6.2 "제스처 → 커맨드" 표의 각 행 + 벤딩 규칙. */
+/**
+ * 스펙 6.2 "제스처 → 커맨드" 표의 각 행 + 벤딩 규칙.
+ * 여기서는 "떼도 울림" 모드(holdToSustain = false, v1.0.0 동작)로 본다. 누르는 동안만 소리는 [FretboardHoldSustainTest].
+ */
 class FretboardTouchTrackerTest {
     private val sent = mutableListOf<Command>()
     private val sounded = mutableListOf<Pair<Int, Int>>()
@@ -19,7 +22,7 @@ class FretboardTouchTrackerTest {
         onBend = { string, displacement -> bendVisuals += string to displacement },
         maxBendCents = 200f,
         clockMs = { nowMs += stepMs; nowMs },
-    )
+    ).also { it.holdToSustain = false }
 
     /** 밴드 좌표: 0 = 지판 위쪽 끝, 줄 s의 중심 = (3 − s) + 0.5. [offset]은 밴드 높이 단위. */
     private fun y(string: Int, offset: Float = 0f): Float = (3 - string) + 0.5f + offset
@@ -96,12 +99,14 @@ class FretboardTouchTrackerTest {
         )
     }
 
+    /** v1.0.0은 "마지막 이벤트가 이김"이라 아래 손가락이 움직여도 Slide가 나갔다. 소유권 규칙 이후로는 위 손가락만 음을 움직인다. */
     @Test
-    fun `two pointers on one string both send and the last event wins in the engine`() {
+    fun `two pointers on one string - only the later finger moves the note`() {
         tracker.down(1L, 1, 3, y(1))
         tracker.down(2L, 1, 8, y(1))
         tracker.move(1L, 1, 4, y(1))
-        assertEquals(listOf(Command.NoteOn(1, 3), Command.NoteOn(1, 8), Command.Slide(1, 4)), sent)
+        tracker.move(2L, 1, 9, y(1))
+        assertEquals(listOf(Command.NoteOn(1, 3), Command.NoteOn(1, 8), Command.Slide(1, 9)), sent)
     }
 
     @Test
@@ -336,6 +341,7 @@ class FretboardTouchTrackerTest {
         val wide = mutableListOf<Command>()
         var t0 = 0L
         val t = FretboardTouchTracker(send = { wide += it }, maxBendCents = 400f, clockMs = { t0 += 100; t0 })
+        t.holdToSustain = false
         t.down(1L, 0, 3, y(0))
         t.move(1L, 0, 3, y(0, 0.5f))
         assertEquals(Command.Bend(0, 400f), wide.last())
