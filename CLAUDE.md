@@ -1,6 +1,6 @@
 # get-your-guitar
 
-Android 앱 프로젝트 (베이스 지판 시뮬레이터). Kotlin 2.4 + Jetpack Compose, Gradle 9.7 멀티모듈: `:core`(순수 JVM, JUnit 5) + `:app`(AGP 9.4, compileSdk 37 / targetSdk 36 / minSdk 33). 설계 스펙은 `docs/superpowers/specs/`, 구현 계획은 `docs/superpowers/plans/`.
+Android 앱 프로젝트 (베이스 지판 시뮬레이터). Kotlin 2.4 + Jetpack Compose, Gradle 9.7 멀티모듈: `:core`(순수 JVM, JUnit 5) + `:app`(AGP 9.4, compileSdk 37 / targetSdk 36 / minSdk 31). 설계 스펙은 `docs/superpowers/specs/`, 구현 계획은 `docs/superpowers/plans/`.
 
 ## 개발 환경 워크플로우
 
@@ -31,4 +31,4 @@ Android 앱 프로젝트 (베이스 지판 시뮬레이터). Kotlin 2.4 + Jetpac
 - SDS PC(검증 환경)는 `JAVA_HOME`이 Android Studio JBR(21)로 잡혀 있어 프리앰블 없이 `./gradlew.bat`을 바로 쓴다. `local.properties`에 `sdk.dir` 필요.
 - 버전은 `gradle/libs.versions.toml`이 단일 진실. 올릴 때는 그 파일만 고친다.
 - `:app`은 AGP built-in Kotlin을 쓴다 — `org.jetbrains.kotlin.android` 플러그인을 적용하지 않는다.
-- Claude Code Bash 도구의 heredoc은 `\`를 `\`로 깎는다. 백슬래시가 든 Kotlin/정규식 문자열은 Edit 도구로 쓴다.
+- Claude Code Bash 도구의 heredoc은 연속된 백슬래시 2개를 1개로 깎는다. 백슬래시가 든 Kotlin/정규식 문자열은 Edit 도구로 쓴다.

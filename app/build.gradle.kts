@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "com.sproutgreen.getyourguitar"
-        minSdk = 33
+        minSdk = 31
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"

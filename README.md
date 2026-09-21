@@ -21,7 +21,7 @@
 ./gradlew :app:installDebug                   # 실기기 설치 (검증 환경, USB 디버깅)
 ```
 Windows Git Bash에서는 `./gradlew.bat`. `JAVA_HOME`(JDK 17+)과 `ANDROID_HOME` 또는 `local.properties`의 `sdk.dir`이 필요하다.
-compileSdk 37 / targetSdk 36 / minSdk 33. 필요한 SDK 플랫폼(`platforms;android-37`)은 라이선스가 수락돼 있으면 AGP가 자동 다운로드한다.
+compileSdk 37 / targetSdk 36 / minSdk 31 (테스트 폰 Galaxy S10e가 Android 12라서 31). 필요한 SDK 플랫폼(`platforms;android-37`)은 라이선스가 수락돼 있으면 AGP가 자동 다운로드한다.
 
 ### 검증 환경에서 M0 확인 절차
 1. `git pull` → `./gradlew :app:installDebug` → 폰에서 "get-your-guitar" 실행

@@ -3,14 +3,14 @@
 > 어느 환경에서든 세션 시작 시 이 파일을 먼저 읽고, push 전에 갱신한다.
 > 대화 기록이나 로컬 메모리에만 있는 정보는 다른 환경에 전달되지 않는다 — 여기에 쓴다.
 
-## 현재 위치 (2026-09-18)
+## 현재 위치 (2026-09-21)
 
 | 마일스톤 | 상태 | 비고 |
 |---|---|---|
 | 설계 스펙 v1 | ✅ 승인 (2026-09-16) | `docs/superpowers/specs/2026-09-16-get-your-guitar-v1-design.md` |
 | M0 스캐폴드 — 계획 | ✅ 작성 (2026-09-16) | `docs/superpowers/plans/2026-09-16-m0-scaffold.md` |
 | M0 스캐폴드 — 구현 | ✅ 빌드 통과 (2026-09-18, SDS PC) | `:core:test` 1개 PASSED, `assembleDebug`·`lintDebug` 통과(린트 에러 0·경고 4), APK 29.5 MB. **compileSdk 37**(스펙 36에서 변경, 계획서 "실행 기록" 참고) |
-| M0 — 실기기 확인 | ⬜ **검증 환경에서 확인 필요** | 폰 미연결 상태였음. README "검증 환경에서 M0 확인 절차" 참고 |
+| M0 — 실기기 확인 | ⬜ **검증 환경에서 확인 필요** | 2026-09-21 테스트 폰 Galaxy S10e(SM-G970N, Android 12/API 31) 연결. 이 폰 때문에 **minSdk 33→31**. USB 디버깅 승인이 풀려 설치는 아직 못 함 |
 | M0 — 아키랩 빌드 확인 | ⬜ 아키랩에서 확인 필요 | JDK 17 + `platforms;android-37` 자동 다운로드 여부 |
 | M1 첫 소리 | ⬜ 미착수 | 계획 문서 없음. 스펙 9장 M1 참고 |
 | M2 연주감·설정 | ⬜ | |
@@ -34,3 +34,4 @@
 - 2026-09-16 (아키랩): 저장소 생성, 워크플로우 문서, 툴체인 설치 기록, v1 스펙 승인, M0 계획 작성.
 - 2026-09-18 (SDS PC): 환경 최초 세팅(메모리 링크), 툴체인 기록, 이 파일 생성.
 - 2026-09-18 (SDS PC): **M0 구현** — Gradle 9.7.0 wrapper, 버전 카탈로그, `:core`(JUnit 6), `:app`(빈 Compose 화면). compileSdk 36→37. 커밋 4개(d962f12, 3c3251b, f38fa14, 9c6cac3). 실기기 미확인.
+- 2026-09-21 (SDS PC): 테스트 폰 Galaxy S10e(Android 12) 연결 → minSdk 33→31. minSdk 31로 `:core:test`·`assembleDebug`·`lintDebug` 통과. adb 승인이 재연결 때 풀려(`unauthorized`) `installDebug`는 미완.

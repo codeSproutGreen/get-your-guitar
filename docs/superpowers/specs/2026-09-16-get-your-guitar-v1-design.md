@@ -20,7 +20,7 @@
 | 목적 | 개인용 베이스 연습 도구 (출시 아님) |
 | 핵심 장면 | 악기 대용으로 연주 — 저지연·멀티터치·자연 감쇠가 최우선 |
 | 음원 | 합성(Karplus-Strong)으로 시작, `Voice` 인터페이스 뒤에서 샘플 재생으로 교체 가능 |
-| 대상 기기 | 최신 Galaxy/Pixel 1대, Android 13+ → minSdk 33 |
+| 대상 기기 | 최신 Galaxy/Pixel 1대, Android 13+. **minSdk는 31** — 검증 환경의 테스트 폰이 Galaxy S10e(Android 12, API 31)라서 2026-09-21에 33→31로 내림. v1 기능 중 API 32·33 전용은 없다 |
 | 제스처 | 탭 = 피킹, 자연 감쇠. 지판 드래그 = 슬라이드(같은 줄) / 레이크(다른 줄). 지판 바깥 띠 드래그 = 스크롤 |
 | 줄/튜닝 | 4현 표준 E1 A1 D2 G2 고정 (튜닝은 데이터로 두어 확장 가능) |
 | 지판 보기 | 등간격 12프렛 창, 띠 드래그 스크롤 + 프렛 경계 스냅 |
@@ -259,7 +259,7 @@ get-your-guitar/
 1. 최신 안정 버전 확인·고정: AGP, Gradle, Kotlin, Compose BOM, DataStore, JUnit 5 → `gradle/libs.versions.toml`
 2. Gradle wrapper 생성(배포판은 `GRADLE_USER_HOME`으로), `.gitattributes`(`gradlew`·`*.sh`는 LF)
 3. `:core` (`kotlin("jvm")`, JUnit 5) — 자리표시 테스트 1개로 파이프라인 확인
-4. `:app` (compileSdk 36→37(M0에서 변경, 10장 참고), minSdk 33, Compose, 가로 고정) — "get-your-guitar" 텍스트만 있는 화면
+4. `:app` (compileSdk 36→37(M0에서 변경, 10장 참고), minSdk 33→31(2장 참고), Compose, 가로 고정) — "get-your-guitar" 텍스트만 있는 화면
 5. `local.properties`는 gitignore, README에 빌드 명령 기록
 완료 기준: 아키랩 `:core:test`·`:app:assembleDebug` 통과. 검증 환경: 설치·실행 확인.
 
@@ -292,7 +292,7 @@ get-your-guitar/
 완료 기준: 체크리스트 전 항목 통과 기록. 이후 v2 백로그 착수.
 
 ## 10. 스택·환경
-- Kotlin 2.x, AGP 최신 안정판(compileSdk 36 / targetSdk 36 / minSdk 33), Compose BOM 최신, kotlinx.coroutines, DataStore Preferences, JUnit 5. 정확한 버전은 M0에서 확인해 `libs.versions.toml`에 고정. **[M0 실행 기록 2026-09-18]** androidx.core 1.19.0·Compose 1.12.1이 API 37 이상 컴파일을 요구해 **compileSdk는 37**로 고정했다(targetSdk 36·minSdk 33은 유지). AGP가 `platforms;android-37`을 자동 다운로드한다.
+- Kotlin 2.x, AGP 최신 안정판(compileSdk 36 / targetSdk 36 / minSdk 33 — 실제 고정값은 37 / 36 / 31, 아래 기록과 2장 참고), Compose BOM 최신, kotlinx.coroutines, DataStore Preferences, JUnit 5. 정확한 버전은 M0에서 확인해 `libs.versions.toml`에 고정. **[M0 실행 기록 2026-09-18]** androidx.core 1.19.0·Compose 1.12.1이 API 37 이상 컴파일을 요구해 **compileSdk는 37**로 고정했다(targetSdk 36·minSdk 33은 유지). AGP가 `platforms;android-37`을 자동 다운로드한다.
 - 개발 환경 워크플로우와 아키랩 의존성은 `CLAUDE.md`, `README.md` 참고. 아키랩은 코드·JVM 테스트·컴파일까지, 실기기 검증은 검증 환경.
 
 ## 11. 가정과 열린 값
