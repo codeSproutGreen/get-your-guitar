@@ -54,7 +54,7 @@ class KarplusStrongVoiceTest {
         val soft = voice().also { it.noteOn(110f, 0.2f) }
         val pLoud = SignalAnalysis.peak(SignalAnalysis.render(loud, 4800))
         val pSoft = SignalAnalysis.peak(SignalAnalysis.render(soft, 4800))
-        assertTrue(pLoud in 0.3f..0.85f, "loud peak $pLoud")
+        assertTrue(pLoud in 0.6f..1.3f, "loud peak $pLoud") // 개방현 피크 ≈ velocity × 1.25 (OUTPUT_GAIN 주석 참고)
         assertEquals(4f, pLoud / pSoft, 0.2f)
     }
 
@@ -219,5 +219,55 @@ class KarplusStrongVoiceTest {
         val attack = SignalAnalysis.rms(out, sr / 20, sr / 20 + sr / 5)
         val later = SignalAnalysis.rms(out, sr * 3 - sr / 5, sr * 3)
         assertTrue(later > attack * 0.05f && later < attack, "E1 attack=$attack later=$later")
+    }
+
+    // ---- 음색 (피드백 2026-09-21: "소리가 구리다") ----
+
+    private fun correlation(a: FloatArray, b: FloatArray, n: Int): Double {
+        var ab = 0.0; var aa = 0.0; var bb = 0.0
+        for (i in 0 until n) { ab += a[i].toDouble() * b[i]; aa += a[i].toDouble() * a[i]; bb += b[i].toDouble() * b[i] }
+        return ab / Math.sqrt(aa * bb)
+    }
+
+    /** 백색 노이즈 여기는 칠 때마다 음색이 달랐다. 당겼다 놓는 파형이 주가 되면 두 번의 피킹이 거의 같은 파형이어야 한다. */
+    @Test
+    fun `two plucks of the same note have nearly the same waveform`() {
+        val a = KarplusStrongVoice(sr, seed = 1).also { it.noteOn(Pitch.hz(33), 0.8f) }
+        val b = KarplusStrongVoice(sr, seed = 99).also { it.noteOn(Pitch.hz(33), 0.8f) }
+        val c = correlation(SignalAnalysis.render(a, sr / 4), SignalAnalysis.render(b, sr / 4), sr / 4)
+        assertTrue(c > 0.9, "plucks differ too much, correlation $c")
+    }
+
+    /** 밝기 지표 = 인접 샘플 차이의 RMS / 신호 RMS. 노이즈 여기(v1.0.0)는 E1에서 0.19 안팎이었다. */
+    @Test
+    fun `a low note is not hissy`() {
+        val v = voice().also { it.noteOn(Pitch.hz(28), 0.8f) }
+        val out = SignalAnalysis.render(v, sr / 2)
+        val diff = FloatArray(out.size - 1) { out[it + 1] - out[it] }
+        val brightness = SignalAnalysis.rms(diff) / SignalAnalysis.rms(out)
+        assertTrue(brightness < 0.12f, "brightness index $brightness")
+    }
+
+    @Test
+    fun `knowing the open string pitch keeps the tuning and rounds the tone up the neck`() {
+        fun brightness(openHz: Float): Float {
+            val v = KarplusStrongVoice(sr, openHz = openHz).also { it.noteOn(Pitch.hz(55), 0.8f) } // G3
+            val out = SignalAnalysis.render(v, sr / 2)
+            assertHz(Pitch.hz(55), SignalAnalysis.estimateHz(out, sr, Pitch.hz(55), from = 2000, length = 12_000))
+            val diff = FloatArray(out.size - 1) { out[it + 1] - out[it] }
+            return SignalAnalysis.rms(diff) / SignalAnalysis.rms(out)
+        }
+        val asOpenString = brightness(openHz = Pitch.hz(55)) // 개방현으로 G3을 낼 때
+        val atTwelfthFret = brightness(openHz = Pitch.hz(43)) // G줄 12프렛으로 G3을 낼 때
+        assertTrue(atTwelfthFret < asOpenString, "12th fret should sound rounder: $atTwelfthFret vs $asOpenString")
+    }
+
+    @Test
+    fun `output has no DC offset`() {
+        val v = voice().also { it.noteOn(Pitch.hz(40), 0.8f) }
+        val out = SignalAnalysis.render(v, sr)
+        var sum = 0.0
+        for (x in out) sum += x
+        assertTrue(Math.abs(sum / out.size) < 1e-3, "mean ${sum / out.size}")
     }
 }

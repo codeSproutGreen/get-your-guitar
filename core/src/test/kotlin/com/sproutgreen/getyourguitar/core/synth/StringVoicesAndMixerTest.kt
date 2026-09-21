@@ -95,4 +95,61 @@ class StringVoicesAndMixerTest {
         assertEquals(0.5f, buf[4])
         assertTrue(buf[0] < 0.5f)
     }
+
+    // ---- 리미터·앰프 필터 (피드백 2026-09-21: "소리가 구리다") ----
+
+    /** v1.0.0의 x/(1+|x|)는 선형 구간이 없어 보통 음량에서도 9~23% 눌렸다. */
+    @Test
+    fun `limiter is exactly linear below the knee`() {
+        for (level in floatArrayOf(0.05f, 0.2f, 0.6f, 1.0f, -1.0f)) {
+            val buf = floatArrayOf(level)
+            Mixer.process(buf, 1, masterGain = 1f)
+            assertEquals(level * Mixer.PRE_GAIN, buf[0], 0f, "input $level must pass untouched")
+        }
+        assertTrue(Mixer.KNEE >= 0.5f)
+    }
+
+    @Test
+    fun `limiter is continuous and monotonic through the knee`() {
+        var previous = 0f
+        var x = 0f
+        while (x < 8f) {
+            val buf = floatArrayOf(x)
+            Mixer.process(buf, 1, 1f)
+            assertTrue(buf[0] >= previous, "not monotonic at $x")
+            assertTrue(buf[0] - previous < 0.01f, "jump at $x: $previous -> ${buf[0]}")
+            previous = buf[0]
+            x += 0.01f
+        }
+        assertTrue(previous > 0.95f && previous <= 1f)
+    }
+
+    private fun sineThroughAmp(hz: Float): Float {
+        val amp = AmpFilter(sr)
+        val buf = FloatArray(sr / 2) { Math.sin(2.0 * Math.PI * hz * it / sr).toFloat() }
+        amp.process(buf, buf.size)
+        return SignalAnalysis.rms(buf, sr / 4, sr / 2) / (1f / Math.sqrt(2.0).toFloat())
+    }
+
+    @Test
+    fun `amp filter passes the bass range and rolls off the fizz`() {
+        assertEquals(1f, sineThroughAmp(60f), 0.05f)
+        assertEquals(1f, sineThroughAmp(400f), 0.08f)
+        assertTrue(sineThroughAmp(2_000f) > 0.7f)
+        assertTrue(sineThroughAmp(10_000f) < 0.2f, "10 kHz gain ${sineThroughAmp(10_000f)}")
+    }
+
+    @Test
+    fun `amp filter falls to exact silence after the input stops`() {
+        val amp = AmpFilter(sr)
+        val buf = FloatArray(1000) { 0.5f }
+        amp.process(buf, buf.size)
+        // 상태는 가장 작은 비정규수에서 멈춘다(s − a·s 의 a·s 가 0으로 반올림). 블록 끝의 플러시가 이를 0으로 만든다.
+        val tail = FloatArray(sr / 50)
+        amp.process(tail, tail.size)
+        assertTrue(Math.abs(tail.last()) < 1e-30f)
+        val next = FloatArray(64)
+        amp.process(next, next.size)
+        for (x in next) assertEquals(0f, x)
+    }
 }

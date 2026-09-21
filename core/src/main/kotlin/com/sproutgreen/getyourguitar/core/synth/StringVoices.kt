@@ -5,9 +5,13 @@ class StringVoices(
     val count: Int,
     sampleRate: Int,
     tone: ToneParams = ToneParams.DEFAULT,
+    /** 줄별 개방현 주파수. 주면 높은 프렛일수록 음색이 둥글어진다([KarplusStrongVoice]의 openHz). */
+    openHz: FloatArray? = null,
+    character: VoiceCharacter = VoiceCharacter.DEFAULT,
 ) {
-    private val voices: Array<KarplusStrongVoice> =
-        Array(count) { KarplusStrongVoice(sampleRate, tone, seed = 0x2F6E2B1 + it * 7919) }
+    private val voices: Array<KarplusStrongVoice> = Array(count) {
+        KarplusStrongVoice(sampleRate, tone, seed = 0x2F6E2B1 + it * 7919, openHz = openHz?.get(it) ?: 0f, character = character)
+    }
 
     val anyActive: Boolean
         get() {

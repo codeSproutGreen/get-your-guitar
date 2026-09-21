@@ -2,8 +2,10 @@ package com.sproutgreen.getyourguitar.core.engine
 
 import com.sproutgreen.getyourguitar.core.music.Fretboard
 import com.sproutgreen.getyourguitar.core.music.Tuning
+import com.sproutgreen.getyourguitar.core.synth.AmpFilter
 import com.sproutgreen.getyourguitar.core.synth.Mixer
 import com.sproutgreen.getyourguitar.core.synth.StringVoices
+import com.sproutgreen.getyourguitar.core.synth.VoiceCharacter
 
 /** 오디오 스레드가 쓰고 UI가 읽는 통계. 콜백 없이 폴링한다. */
 class EngineStats {
@@ -22,12 +24,19 @@ class EngineStats {
 class SynthEngine(
     val sampleRate: Int,
     tuning: Tuning = Tuning.STANDARD_BASS_4,
+    character: VoiceCharacter = VoiceCharacter.DEFAULT,
 ) {
     val stats = EngineStats()
 
     private val fretboard = Fretboard(tuning)
     private val queue = CommandQueue()
-    private val voices = StringVoices(tuning.stringCount, sampleRate)
+    private val voices = StringVoices(
+        tuning.stringCount,
+        sampleRate,
+        openHz = FloatArray(tuning.stringCount) { fretboard.hzAt(it, 0) },
+        character = character,
+    )
+    private val amp = AmpFilter(sampleRate)
     private val slot = IntArray(CommandQueue.SLOT_SIZE)
     private var masterGain = DEFAULT_MASTER_GAIN
 
@@ -47,6 +56,7 @@ class SynthEngine(
         while (queue.poll(slot)) apply(slot)
         java.util.Arrays.fill(out, 0, frames, 0f)
         voices.render(out, 0, frames)
+        amp.process(out, frames)
         Mixer.process(out, frames, masterGain)
     }
 

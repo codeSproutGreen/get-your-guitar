@@ -22,6 +22,10 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+    // 음색 시연 WAV 렌더(ToneDemoRender)를 켜는 스위치를 테스트 JVM으로 넘긴다. 평소에는 꺼져 있다.
+    for (key in listOf("gyg.renderWav", "gyg.renderLabel")) {
+        System.getProperty(key)?.let { systemProperty(key, it) }
+    }
     testLogging {
         events("passed", "failed", "skipped")
     }
