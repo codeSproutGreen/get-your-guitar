@@ -12,12 +12,17 @@ android {
         minSdk = 31
         targetSdk = 36
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "1.0.0"
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            // 개인용 앱이라 정식 키스토어를 두지 않는다(저장소에 넣을 수 없는 비밀이 생긴다).
+            // 각 환경의 디버그 키로 서명한다 → 다른 PC에서 만든 APK로 덮어 설치하려면 먼저 앱을 지워야 한다.
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 

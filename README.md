@@ -24,6 +24,20 @@
 Windows Git Bash에서는 `./gradlew.bat`. `JAVA_HOME`(JDK 17+)과 `ANDROID_HOME` 또는 `local.properties`의 `sdk.dir`이 필요하다.
 compileSdk 37 / targetSdk 36 / minSdk 31 (테스트 폰 Galaxy S10e가 Android 12라서 31). 필요한 SDK 플랫폼(`platforms;android-37`)은 라이선스가 수락돼 있으면 AGP가 자동 다운로드한다.
 
+### 릴리스 APK
+
+```bash
+./gradlew :core:test :app:testDebugUnitTest :app:lintDebug :app:assembleRelease
+# → app/build/outputs/apk/release/app-release.apk  (R8 축소, 약 1.4 MB. 디버그 빌드는 약 29 MB)
+adb install -r app/build/outputs/apk/release/app-release.apk
+```
+- 배포는 **GitHub Releases** (`gh release create vX.Y.Z <apk>`). APK는 저장소에 커밋하지 않는다(`.gitignore`의 `*.apk`).
+- 서명은 **빌드한 PC의 Android 디버그 키**(`~/.android/debug.keystore`)다. 개인용 앱이라 정식 키스토어를 두지 않는다 — 두면 저장소에 넣을 수 없는 비밀이 생겨 환경 간 공유가 깨진다.
+  - 대가: 디버그 키는 PC마다 다르다. **다른 PC에서 만든 APK로 덮어 설치하면 서명 불일치로 실패**하므로 먼저 앱을 지워야 하고, 그때 앱 데이터(M2 이후의 설정)가 사라진다. 릴리스는 가급적 한 환경(SDS PC)에서만 만든다.
+  - v1.0.0 서명 인증서 SHA-256: `b3b6c7c9cc16303203636961e89357121144b66075bd272f7ac1e0ab92aa37f8` (SDS PC)
+- 릴리스 빌드는 디버깅 플래그가 꺼져 있어 `gyg-cmd` 커맨드 로그가 나오지 않는다. adb 터치 주입으로 제스처를 검증할 때는 디버그 빌드를 쓴다.
+- 버전을 올릴 때 `app/build.gradle.kts`의 `versionCode`를 반드시 1씩 올린다(같거나 낮으면 덮어 설치가 거부된다).
+
 ### 검증 환경에서 M0 확인 절차
 1. `git pull` → `./gradlew :app:installDebug` → 폰에서 "get-your-guitar" 실행
 2. 확인: 가로로 뜨고 화면 가운데 "get-your-guitar" 텍스트가 보인다

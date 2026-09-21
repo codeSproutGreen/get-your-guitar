@@ -30,6 +30,7 @@ Android 앱 프로젝트 (베이스 지판 시뮬레이터). Kotlin 2.4 + Jetpac
 - 아키랩(Windows, Claude Code Bash)에서는 환경변수가 세션에 없을 수 있으니 앞에
   `export JAVA_HOME='E:\yjane.kim\tools\jdk-17.0.20.1+1' GRADLE_USER_HOME='E:\yjane.kim\tools\gradle-user-home'` 를 붙이고 `./gradlew.bat`을 쓴다.
 - SDS PC(검증 환경)는 `JAVA_HOME`이 Android Studio JBR(21)로 잡혀 있어 프리앰블 없이 `./gradlew.bat`을 바로 쓴다. `local.properties`에 `sdk.dir` 필요.
+- 릴리스: `./gradlew :app:assembleRelease` → `gh release create vX.Y.Z <apk>`. R8 축소 + 빌드 PC의 디버그 키 서명. 릴리스 전에 축소된 APK를 실기기에 설치해 실행·소리·크래시를 확인한다(R8은 런타임에서만 드러나는 문제를 만들 수 있다). 절차와 서명 주의사항은 README "릴리스 APK".
 - 버전은 `gradle/libs.versions.toml`이 단일 진실. 올릴 때는 그 파일만 고친다.
 - `:app`은 AGP built-in Kotlin을 쓴다 — `org.jetbrains.kotlin.android` 플러그인을 적용하지 않는다.
 - Claude Code Bash 도구의 heredoc은 연속된 백슬래시 2개를 1개로 깎는다. 백슬래시가 든 Kotlin/정규식 문자열은 Edit 도구로 쓴다.
