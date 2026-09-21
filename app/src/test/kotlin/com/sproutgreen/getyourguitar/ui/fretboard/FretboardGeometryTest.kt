@@ -112,4 +112,14 @@ class FretboardGeometryTest {
         assertEquals(12f, geo.clampScroll(40f))
         assertEquals(3.3f, geo.clampScroll(3.3f))
     }
+
+    @Test
+    fun `band coordinate measures vertical position in string bands`() {
+        assertEquals(0f, geo.bandCoordinate(80f), 1e-4f)      // 지판 위쪽 끝
+        assertEquals(0.5f, geo.bandCoordinate(170f), 1e-4f)   // G줄 중심
+        assertEquals(3.5f, geo.bandCoordinate(710f), 1e-4f)   // E줄 중심
+        assertEquals(-0.5f, geo.bandCoordinate(-10f), 1e-4f)  // 지판 밖은 클램프하지 않는다(벤딩량 계산용)
+        // 줄 s의 중심은 항상 (stringCount − 1 − s) + 0.5
+        for (s in 0..3) assertEquals((3 - s) + 0.5f, geo.bandCoordinate(geo.stringCenterY(s)), 1e-4f)
+    }
 }

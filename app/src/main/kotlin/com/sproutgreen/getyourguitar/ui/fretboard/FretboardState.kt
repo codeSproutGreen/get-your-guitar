@@ -6,6 +6,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -15,7 +16,10 @@ import kotlin.math.roundToInt
 /** 방금 소리 난 셀. [startNanos]는 `System.nanoTime()` 기준(프레임 시계와 같은 시간축). */
 data class Highlight(val string: Int, val fret: Int, val startNanos: Long)
 
-/** 지판 화면의 UI 상태: 스크롤 위치와 하이라이트. 오디오와 무관하다. */
+/** 벤딩 중인 줄을 휘어 그리기 위한 정보. [x]는 손가락의 화면 x, [offsetBands]는 밴드 단위 세로 변위(±0.5). */
+data class BendVisual(val x: Float, val offsetBands: Float)
+
+/** 지판 화면의 UI 상태: 스크롤 위치, 하이라이트, 벤딩 표시. 오디오와 무관하다. */
 @Stable
 class FretboardState {
     /** 화면 왼쪽 끝의 지판 좌표 u. −1(개방현 + 1~11프렛) ~ 12(13~24프렛). */
@@ -23,6 +27,12 @@ class FretboardState {
         private set
 
     val highlights = mutableStateListOf<Highlight>()
+
+    /** 줄 번호 → 벤딩 표시. 벤딩 중인 줄만 들어 있다. */
+    val bends = mutableStateMapOf<Int, BendVisual>()
+
+    /** 제스처 계층이 추적기를 부르기 직전에 적어 두는 손가락 x. 추적기는 화면 좌표를 모른다. */
+    var touchX: Float = 0f
 
     private var settleJob: Job? = null
 
@@ -50,6 +60,11 @@ class FretboardState {
     fun highlight(string: Int, fret: Int) {
         highlights.removeAll { it.string == string }
         highlights.add(Highlight(string, fret, System.nanoTime()))
+    }
+
+    /** [FretboardTouchTracker]의 onBend 콜백. 변위 0 = 손을 뗐거나 다른 줄로 넘어감. */
+    fun bend(string: Int, displacementBands: Float) {
+        if (displacementBands == 0f) bends.remove(string) else bends[string] = BendVisual(touchX, displacementBands)
     }
 
     fun pruneHighlights(nowNanos: Long) {

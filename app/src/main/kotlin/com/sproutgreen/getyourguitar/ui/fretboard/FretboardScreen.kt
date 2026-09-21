@@ -46,7 +46,7 @@ private val ErrorColor = Color(0xFFFF6B5E)
 fun FretboardScreen(audio: AudioController, modifier: Modifier = Modifier) {
     val fretboard = remember { Fretboard(Tuning.STANDARD_BASS_4) }
     val state = remember { FretboardState() }
-    val tracker = remember(audio, state) { FretboardTouchTracker(send = audio::send, onSounded = state::highlight) }
+    val tracker = remember(audio, state) { FretboardTouchTracker(send = audio::send, onSounded = state::highlight, onBend = state::bend) }
     val scope = rememberCoroutineScope()
     var showNoteNames by rememberSaveable { mutableStateOf(false) }
 

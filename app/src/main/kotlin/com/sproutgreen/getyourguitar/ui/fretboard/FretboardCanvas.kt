@@ -13,6 +13,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
@@ -74,7 +75,7 @@ fun FretboardCanvas(
         drawBoard(geometry, layout, firstFret, lastFret)
         drawStrips(geometry, layout, firstFret, lastFret, textMeasurer)
         drawHighlights(geometry, layout, state.highlights, nowNanos)
-        drawStrings(geometry)
+        drawStrings(geometry, state.bends)
         if (showNoteNames) drawNoteNames(geometry, layout, fretboard, firstFret, lastFret, textMeasurer)
     }
 }
@@ -134,15 +135,27 @@ private fun DrawScope.drawStrips(
     }
 }
 
-private fun DrawScope.drawStrings(geometry: FretboardGeometry) {
+private fun DrawScope.drawStrings(geometry: FretboardGeometry, bends: Map<Int, BendVisual>) {
     // 줄 0(E)이 가장 굵다.
     val lowest = 5.5f
     val step = 1.1f
     for (string in 0 until geometry.stringCount) {
         val y = geometry.stringCenterY(string)
         val thickness = (lowest - step * string).coerceAtLeast(1.5f).dp.toPx()
-        drawLine(StringShadow, Offset(0f, y + thickness * 0.6f), Offset(size.width, y + thickness * 0.6f), thickness)
-        drawLine(StringColor, Offset(0f, y), Offset(size.width, y), thickness)
+        val shadow = thickness * 0.6f
+        val bend = bends[string]
+        if (bend == null) {
+            drawLine(StringShadow, Offset(0f, y + shadow), Offset(size.width, y + shadow), thickness)
+            drawLine(StringColor, Offset(0f, y), Offset(size.width, y), thickness)
+        } else {
+            // 당긴 줄: 손가락 위치를 꼭짓점으로 하는 꺾은선. 손가락을 그대로 따라가 "당기는" 느낌을 준다.
+            val apex = Offset(bend.x.coerceIn(0f, size.width), y + bend.offsetBands * geometry.bandHeight)
+            val below = Offset(0f, shadow)
+            drawLine(StringShadow, Offset(0f, y) + below, apex + below, thickness, StrokeCap.Round)
+            drawLine(StringShadow, apex + below, Offset(size.width, y) + below, thickness, StrokeCap.Round)
+            drawLine(StringColor, Offset(0f, y), apex, thickness, StrokeCap.Round)
+            drawLine(StringColor, apex, Offset(size.width, y), thickness, StrokeCap.Round)
+        }
     }
 }
 

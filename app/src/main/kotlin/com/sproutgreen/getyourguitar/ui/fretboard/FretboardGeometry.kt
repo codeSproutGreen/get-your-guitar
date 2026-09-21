@@ -36,6 +36,12 @@ class FretboardGeometry(
         return stringCount - 1 - band
     }
 
+    /**
+     * 세로 위치를 줄 밴드 단위로. 0 = 지판 위쪽 끝, 줄 s의 중심 = (stringCount − 1 − s) + 0.5.
+     * 벤딩량(세로 이동 거리)을 화면 크기와 무관하게 재기 위한 좌표라서 지판 밖에서도 클램프하지 않는다.
+     */
+    fun bandCoordinate(y: Float): Float = (y - boardTop) / bandHeight
+
     fun stringCenterY(string: Int): Float = boardTop + (stringCount - 1 - string + 0.5f) * bandHeight
 
     /** 0 = 개방현 셀. 범위 밖의 x는 0 또는 [fretCount]로 클램프한다. */
