@@ -55,10 +55,10 @@ fun FretboardCanvas(
     val textMeasurer = rememberTextMeasurer(cacheSize = 64)
     var nowNanos by remember { mutableLongStateOf(System.nanoTime()) }
 
-    // 하이라이트가 있을 때만 프레임마다 다시 그린다. 없으면 루프가 끝나 유휴 상태에서 그리지 않는다.
-    val animating = state.highlights.isNotEmpty()
+    // 사라지는 중인 하이라이트가 있을 때만 프레임마다 다시 그린다. 누르고만 있는 동안에는 그릴 게 변하지 않는다.
+    val animating = state.highlights.any { !it.held }
     LaunchedEffect(animating) {
-        while (state.highlights.isNotEmpty()) {
+        while (state.highlights.any { !it.held }) {
             withFrameNanos { frameTime ->
                 nowNanos = frameTime
                 state.pruneHighlights(frameTime)
@@ -167,8 +167,8 @@ private fun DrawScope.drawHighlights(
 ) {
     val radius = min(geometry.cellWidth, geometry.bandHeight) * 0.34f
     for (h in highlights) {
-        val age = (nowNanos - h.startNanos).coerceAtLeast(0L).toFloat() / FretboardState.HIGHLIGHT_NANOS
-        val alpha = (1f - age).coerceIn(0f, 1f)
+        val age = (nowNanos - h.startNanos).coerceAtLeast(0L).toFloat() / h.fadeNanos
+        val alpha = if (h.held) 1f else (1f - age).coerceIn(0f, 1f)
         if (alpha <= 0f) continue
         drawCircle(
             color = HighlightColor.copy(alpha = alpha * 0.85f),

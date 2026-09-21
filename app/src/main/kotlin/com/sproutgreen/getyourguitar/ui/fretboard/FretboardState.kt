@@ -13,8 +13,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-/** 방금 소리 난 셀. [startNanos]는 `System.nanoTime()` 기준(프레임 시계와 같은 시간축). */
-data class Highlight(val string: Int, val fret: Int, val startNanos: Long)
+/**
+ * 소리 나는 셀. [held]인 동안은 꺼지지 않고, 아니면 [startNanos]부터 [fadeNanos]에 걸쳐 사라진다.
+ * 시각은 `System.nanoTime()` 기준(프레임 시계와 같은 시간축).
+ */
+data class Highlight(val string: Int, val fret: Int, val startNanos: Long, val held: Boolean, val fadeNanos: Long)
 
 /** 벤딩 중인 줄을 휘어 그리기 위한 정보. [x]는 손가락의 화면 x, [offsetBands]는 밴드 단위 세로 변위(±0.5). */
 data class BendVisual(val x: Float, val offsetBands: Float)
@@ -27,6 +30,9 @@ class FretboardState {
         private set
 
     val highlights = mutableStateListOf<Highlight>()
+
+    /** true = 누르고 있는 동안만 소리. 하이라이트도 소리와 같이 움직인다: 누르는 동안 켜져 있고 떼면 바로 사라진다. */
+    var holdToSustain: Boolean = true
 
     /** 줄 번호 → 벤딩 표시. 벤딩 중인 줄만 들어 있다. */
     val bends = mutableStateMapOf<Int, BendVisual>()
@@ -56,10 +62,17 @@ class FretboardState {
         }
     }
 
-    /** 줄당 하이라이트는 하나. 슬라이드·레이크로 셀이 바뀌면 새 셀에서 다시 시작한다. */
+    /** 줄당 하이라이트는 하나. 슬라이드·레이크·풀오프로 셀이 바뀌면 새 셀에서 다시 시작한다. */
     fun highlight(string: Int, fret: Int) {
         highlights.removeAll { it.string == string }
-        highlights.add(Highlight(string, fret, System.nanoTime()))
+        highlights.add(Highlight(string, fret, System.nanoTime(), held = holdToSustain, fadeNanos = RING_FADE_NANOS))
+    }
+
+    /** 줄이 멈췄다([FretboardTouchTracker]의 onReleased). 그 줄의 하이라이트를 짧게 끈다. */
+    fun release(string: Int) {
+        val index = highlights.indexOfFirst { it.string == string }
+        if (index < 0) return
+        highlights[index] = highlights[index].copy(startNanos = System.nanoTime(), held = false, fadeNanos = RELEASE_FADE_NANOS)
     }
 
     /** [FretboardTouchTracker]의 onBend 콜백. 변위 0 = 손을 뗐거나 다른 줄로 넘어감. */
@@ -68,11 +81,12 @@ class FretboardState {
     }
 
     fun pruneHighlights(nowNanos: Long) {
-        highlights.removeAll { nowNanos - it.startNanos >= HIGHLIGHT_NANOS }
+        highlights.removeAll { !it.held && nowNanos - it.startNanos >= it.fadeNanos }
     }
 
     companion object {
         const val SNAP_MS = 150
-        const val HIGHLIGHT_NANOS = 1_500_000_000L
+        const val RING_FADE_NANOS = 1_500_000_000L
+        const val RELEASE_FADE_NANOS = 200_000_000L
     }
 }
