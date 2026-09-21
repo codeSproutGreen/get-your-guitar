@@ -12,6 +12,7 @@ import kotlin.math.sin
  * 루프: `x = delay[w − delayLen]`(선형 보간) → 1극 로우패스 `lp += a·(x − lp)` → `delay[w] = g·lp`.
  * 한 바퀴의 총 지연이 한 주기여야 하므로 `delayLen = sampleRate/hz − (로우패스의 위상 지연)`.
  * 이 보정이 없으면 높은 음일수록 음이 낮아진다(G4에서 약 41센트).
+ * 로우패스 계수 `a`는 음마다 다시 계산한다([ToneParams.cutoffHz] 의 음높이 연동).
  *
  * 오디오 스레드 전용: 생성자 이후 할당 없음.
  */
@@ -27,6 +28,8 @@ class KarplusStrongVoice(
     private var lp = 0f
     private var a = 0f
     private var g = 0f
+    private var tone: ToneParams = tone
+    private var noteHz = 0f
 
     private var delayLen = 0f
     private var delayTarget = 0f
@@ -47,16 +50,20 @@ class KarplusStrongVoice(
     private var rng = if (seed == 0) 1 else seed
 
     init {
-        setTone(tone)
+        g = tone.feedback()
     }
 
     override val isActive: Boolean get() = active
 
-    /** 컷오프·피드백을 바꾼다. 울리는 중인 음의 음높이 보정은 다음 noteOn/setPitch부터 반영된다. */
+    /** 컷오프·피드백을 바꾼다. 울리는 중이면 필터는 바로 바뀌고, 음높이 보정은 다음 noteOn/setPitch부터 반영된다. */
     fun setTone(tone: ToneParams) {
-        a = (1.0 - exp(-2.0 * Math.PI * tone.cutoffHz() / sampleRate)).toFloat().coerceIn(0.001f, 1f)
+        this.tone = tone
         g = tone.feedback()
+        if (active) a = coefficientFor(noteHz)
     }
+
+    private fun coefficientFor(hz: Float): Float =
+        (1.0 - exp(-2.0 * Math.PI * tone.cutoffHz(hz) / sampleRate)).toFloat().coerceIn(0.001f, 1f)
 
     override fun noteOn(hz: Float, velocity: Float) {
         if (active && env > 0f) {
@@ -78,6 +85,8 @@ class KarplusStrongVoice(
             if (pendingNote) pendingHz = hz
             return
         }
+        noteHz = hz
+        a = coefficientFor(hz)
         delayTarget = delayFor(hz)
         glideLeft = glideSamples
         delayStep = (delayTarget - delayLen) / glideSamples
@@ -158,6 +167,8 @@ class KarplusStrongVoice(
 
     /** 딜레이 라인을 비우고 최근 한 주기 분량을 로우패스 거른 노이즈로 채운다. 피크 = velocity. */
     private fun excite(hz: Float, velocity: Float) {
+        noteHz = hz
+        a = coefficientFor(hz)
         delayLen = delayFor(hz)
         delayTarget = delayLen
         glideLeft = 0

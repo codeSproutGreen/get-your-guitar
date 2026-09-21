@@ -198,4 +198,26 @@ class KarplusStrongVoiceTest {
         val ob = SignalAnalysis.render(b, 4000, chunk = 1000)
         for (i in oa.indices) assertEquals(oa[i], ob[i], 0f, "sample $i differs")
     }
+
+    /** 실기기 피드백(2026-09-21): G줄 고음 프렛이 너무 짧게 끊겼다. 컷오프 key-tracking 전에는 1초 뒤 약 -56 dB. */
+    @Test
+    fun `high notes are still clearly audible one second after the pluck`() {
+        val v = voice()
+        v.noteOn(Pitch.hz(67), 0.8f) // G4 = G줄 24프렛
+        val out = SignalAnalysis.render(v, sr * 3 / 2)
+        val attack = SignalAnalysis.rms(out, sr / 20, sr / 20 + sr / 10)
+        val later = SignalAnalysis.rms(out, sr, sr + sr / 10)
+        assertTrue(later > attack * 0.05f, "G4 fell ${20 * kotlin.math.log10(later / attack)} dB in ~1 s (limit -26 dB)")
+    }
+
+    @Test
+    fun `low notes keep their tone when cutoff tracks pitch`() {
+        // E1은 추적 기준점이라 컷오프가 그대로여야 한다 → 3초 뒤에도 충분히 울린다.
+        val v = voice()
+        v.noteOn(Pitch.hz(28), 0.8f)
+        val out = SignalAnalysis.render(v, sr * 3)
+        val attack = SignalAnalysis.rms(out, sr / 20, sr / 20 + sr / 5)
+        val later = SignalAnalysis.rms(out, sr * 3 - sr / 5, sr * 3)
+        assertTrue(later > attack * 0.05f && later < attack, "E1 attack=$attack later=$later")
+    }
 }

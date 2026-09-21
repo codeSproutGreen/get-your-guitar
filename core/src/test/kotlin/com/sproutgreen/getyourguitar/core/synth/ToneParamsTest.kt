@@ -33,4 +33,21 @@ class ToneParamsTest {
         assertEquals(0.7f, ToneParams.DEFAULT.decay)
         assertTrue(ToneParams.DEFAULT.feedback() < 1f)
     }
+
+    @Test
+    fun `cutoff for a note equals the base cutoff at E1 and rises with the square root of pitch`() {
+        val tone = ToneParams.DEFAULT
+        val base = tone.cutoffHz()
+        assertEquals(base, tone.cutoffHz(noteHz = 41.2f), base * 0.001f)
+        // 두 옥타브 위(4배) → 컷오프 2배
+        assertEquals(base * 2f, tone.cutoffHz(noteHz = 41.2f * 4f), base * 0.01f)
+        assertTrue(tone.cutoffHz(392f) > tone.cutoffHz(196f))
+    }
+
+    @Test
+    fun `cutoff for a note never drops below the base and is capped`() {
+        val tone = ToneParams(1f, 0.5f)
+        assertEquals(tone.cutoffHz(), tone.cutoffHz(noteHz = 20f), 1f)
+        assertTrue(tone.cutoffHz(noteHz = 5000f) <= ToneParams.MAX_TRACKED_CUTOFF_HZ)
+    }
 }
