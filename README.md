@@ -52,7 +52,7 @@ adb install -r app/build/outputs/apk/release/got-you-bass-release.apk
 - 배포는 **GitHub Releases** (`gh release create vX.Y.Z <apk>`). APK는 저장소에 커밋하지 않는다(`.gitignore`의 `*.apk`).
 - 서명은 **빌드한 PC의 Android 디버그 키**(`~/.android/debug.keystore`)다. 개인용 앱이라 정식 키스토어를 두지 않는다 — 두면 저장소에 넣을 수 없는 비밀이 생겨 환경 간 공유가 깨진다.
   - 대가: 디버그 키는 PC마다 다르다. **다른 PC에서 만든 APK로 덮어 설치하면 서명 불일치로 실패**하므로 먼저 앱을 지워야 하고, 그때 앱 데이터(M2 이후의 설정)가 사라진다. 릴리스는 가급적 한 환경(SDS PC)에서만 만든다.
-  - v1.0.0 서명 인증서 SHA-256: `b3b6c7c9cc16303203636961e89357121144b66075bd272f7ac1e0ab92aa37f8` (SDS PC)
+  - v1.0.0·v1.1.0 서명 인증서 SHA-256: `b3b6c7c9cc16303203636961e89357121144b66075bd272f7ac1e0ab92aa37f8` (SDS PC)
 - 릴리스 빌드는 디버깅 플래그가 꺼져 있어 `gyg-cmd` 커맨드 로그가 나오지 않는다. adb 터치 주입으로 제스처를 검증할 때는 디버그 빌드를 쓴다.
 - 버전을 올릴 때 `app/build.gradle.kts`의 `versionCode`를 반드시 1씩 올린다(같거나 낮으면 덮어 설치가 거부된다).
 
