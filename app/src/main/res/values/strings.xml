@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">got-you-bass</string>
+    <!-- 런처·설정에 보이는 이름. APK 파일 이름(got-you-bass)과 패키지는 영문 그대로다. -->
+    <string name="app_name">가츄베이스</string>
 </resources>

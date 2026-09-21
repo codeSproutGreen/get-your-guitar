@@ -1,6 +1,6 @@
 # get-your-guitar
 
-앱 이름은 **got-you-bass** (런처에 보이는 이름·APK 파일 이름). 저장소 이름과 패키지(`com.sproutgreen.getyourguitar`)는 처음 이름 그대로다 — 패키지를 바꾸면 폰에서 다른 앱으로 취급돼 기존 설치본을 덮어쓰지 못한다.
+앱 이름은 **가츄베이스** (런처에 보이는 이름, 영문 표기 got-you-bass = APK 파일 이름). 저장소 이름과 패키지(`com.sproutgreen.getyourguitar`)는 처음 이름 그대로다 — 패키지를 바꾸면 폰에서 다른 앱으로 취급돼 기존 설치본을 덮어쓰지 못한다.
 
 베이스 기타 지판(fretboard) 시뮬레이터 Android 앱. 참고 앱: "Bass Guitar Solo" (`reference.webp`).
 기술 스택·아키텍처는 확정 후 갱신.

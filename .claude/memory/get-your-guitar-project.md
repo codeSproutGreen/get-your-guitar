@@ -5,7 +5,7 @@ metadata:
   type: project
 ---
 
-- **The app is named "got-you-bass"** since 2026-09-21 (launcher label and APK file name; icon from the user-supplied `icon.png` at the repo root, regenerated with `scripts/make-launcher-icon.py`). The repo name `get-your-guitar` and the package `com.sproutgreen.getyourguitar` deliberately stay — changing the package would make it a different app on the phone.
+- **The app is named "가츄베이스"** (launcher label, set 2026-09-21 at the user's request; English form "got-you-bass" is the APK file name; icon from the user-supplied `icon.png` at the repo root, regenerated with `scripts/make-launcher-icon.py`). The repo name `get-your-guitar` and the package `com.sproutgreen.getyourguitar` deliberately stay — changing the package would make it a different app on the phone.
 - The app is a **bass guitar fretboard simulator** for the user's own practice (not for store release), modeled on the app **"Bass Guitar Solo"**. Reference screenshot: `reference.webp` in repo root.
 - **v1 design spec (user-approved 2026-09-16):** `docs/superpowers/specs/2026-09-16-get-your-guitar-v1-design.md`. Read it before any implementation work; it has milestones M0–M3 in section 9.
 - **v1.0.0 released 2026-09-21** as a GitHub Release (tag `v1.0.0`, APK asset) at the user's request, containing M0 + M1 + bending only — M2 (settings/tone sliders) and M3 (metronome) are NOT in it even though the spec calls the whole M0–M3 set "v1". Release builds use R8 and are signed with the building PC's Android debug key (no real keystore by design — it could not live in the repo); so build releases on SDS PC only, bump `versionCode` each time, and smoke-test the minified APK on the phone before publishing.
