@@ -12,7 +12,9 @@ Facts (2026-09-18, full table in README "SDS PC" section):
 - SDK at `C:\Users\SDS\AppData\Local\Android\Sdk`: platforms android-34/35/**36.1**, build-tools 34.0.0/35.0.0/36.1.0, platform-tools. **No `android-36` (36.0), no cmdline-tools.** `ANDROID_HOME` is unset → rely on `local.properties` `sdk.dir`.
 - `GRADLE_USER_HOME` unset → default `~/.gradle`. C: has ~270 GB free, so no disk concern here (unlike 아키랩).
 - `gh` logged in as `codeSproutGreen`. Claude memory junction linked to `.claude/memory` on 2026-09-18.
-- No device was attached at the time of the check (`adb devices` empty).
+- **Test phone: Galaxy S10e (SM-G970N), Android 12 / API 31**, serial R39M207CM4H, 1080x2280. It is a test device, not the phone the user will actually practice on (that one is assumed Android 13+). App minSdk was lowered 33→31 for it on 2026-09-21.
+- **M0 verified on this phone 2026-09-21**: installDebug OK, landscape, centered text, no crash.
+- adb gotchas here: authorization reverts to `unauthorized` on replug unless "always allow" was ticked; in Git Bash prefix `export MSYS_NO_PATHCONV=1` before `adb shell` commands that take `/sdcard/...` paths.
 
 **Why:** Toolchain differs from 아키랩 in JDK major version and SDK platform revision; the first M0 build here is where those differences will surface.
 

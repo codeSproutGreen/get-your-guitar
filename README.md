@@ -91,3 +91,7 @@ Android Studio가 설치돼 있어 별도 설치 없이 그 번들을 그대로 
 - JDK가 17이 아닌 21이다. M0(`:core:test`, `:app:assembleDebug`, `lintDebug`)는 JDK 21로 통과. 아키랩(17)과 결과가 다르면 `java.toolchain`을 17로 고정하는 것을 검토한다.
 - `java`는 PATH에 없다. `gradlew.bat`은 `JAVA_HOME`을 쓰므로 빌드에는 문제 없음.
 - `gh` CLI 설치·로그인(`codeSproutGreen`) 됨. Claude 메모리 junction은 2026-09-18에 링크 완료.
+- 테스트 폰: **Galaxy S10e (SM-G970N), Android 12 / API 31**, 해상도 1080x2280. 이 기기의 마지막 OS라 올릴 수 없어 앱 minSdk를 31로 맞췄다. 2019년 기기이므로 M1의 오디오 지연 평가는 최신 폰보다 불리한 하한선으로 본다.
+- M0 실기기 확인 완료 (2026-09-21): `installDebug` 성공, 가로 고정, 화면 정중앙 텍스트, 크래시 없음.
+- USB 디버깅 승인 팝업에서 "이 컴퓨터에서 항상 허용"을 체크하지 않으면 재연결 때마다 `unauthorized`로 돌아간다.
+- Git Bash에서 `adb shell ... /sdcard/...` 를 쓰면 경로가 `C:/Program Files/Git/sdcard/...`로 바뀐다. 앞에 `export MSYS_NO_PATHCONV=1`을 붙인다.
